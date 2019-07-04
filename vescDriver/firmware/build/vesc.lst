@@ -1,0 +1,2043 @@
+ARM GAS  /tmp/ccE0vHya.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"vesc.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.crc16,"ax",%progbits
+  19              		.align	2
+  20              		.thumb
+  21              		.thumb_func
+  23              	crc16:
+  24              	.LFB63:
+  25              		.file 1 "Src/vesc.c"
+   1:Src/vesc.c    **** #include "vesc.h"
+   2:Src/vesc.c    **** 
+   3:Src/vesc.c    **** uint8_t vescNewValuesReady;
+   4:Src/vesc.c    **** VescValues vescLastValues;
+   5:Src/vesc.c    **** 
+   6:Src/vesc.c    **** static uint8_t payload[32];
+   7:Src/vesc.c    **** static uint8_t sendBuf[64];
+   8:Src/vesc.c    **** static uint8_t incData[128];
+   9:Src/vesc.c    **** static uint8_t uartBuffer;
+  10:Src/vesc.c    **** 
+  11:Src/vesc.c    **** static const uint16_t crc16Tab[] = {
+  12:Src/vesc.c    **** 	0x0000, 0x1021, 0x2042, 0x3063, 0x4084,
+  13:Src/vesc.c    **** 	0x50a5, 0x60c6, 0x70e7, 0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad,
+  14:Src/vesc.c    **** 	0xe1ce, 0xf1ef, 0x1231, 0x0210, 0x3273, 0x2252, 0x52b5, 0x4294, 0x72f7,
+  15:Src/vesc.c    **** 	0x62d6, 0x9339, 0x8318, 0xb37b, 0xa35a, 0xd3bd, 0xc39c, 0xf3ff, 0xe3de,
+  16:Src/vesc.c    **** 	0x2462, 0x3443, 0x0420, 0x1401, 0x64e6, 0x74c7, 0x44a4, 0x5485, 0xa56a,
+  17:Src/vesc.c    **** 	0xb54b, 0x8528, 0x9509, 0xe5ee, 0xf5cf, 0xc5ac, 0xd58d, 0x3653, 0x2672,
+  18:Src/vesc.c    **** 	0x1611, 0x0630, 0x76d7, 0x66f6, 0x5695, 0x46b4, 0xb75b, 0xa77a, 0x9719,
+  19:Src/vesc.c    **** 	0x8738, 0xf7df, 0xe7fe, 0xd79d, 0xc7bc, 0x48c4, 0x58e5, 0x6886, 0x78a7,
+  20:Src/vesc.c    **** 	0x0840, 0x1861, 0x2802, 0x3823, 0xc9cc, 0xd9ed, 0xe98e, 0xf9af, 0x8948,
+  21:Src/vesc.c    **** 	0x9969, 0xa90a, 0xb92b, 0x5af5, 0x4ad4, 0x7ab7, 0x6a96, 0x1a71, 0x0a50,
+  22:Src/vesc.c    **** 	0x3a33, 0x2a12, 0xdbfd, 0xcbdc, 0xfbbf, 0xeb9e, 0x9b79, 0x8b58, 0xbb3b,
+  23:Src/vesc.c    **** 	0xab1a, 0x6ca6, 0x7c87, 0x4ce4, 0x5cc5, 0x2c22, 0x3c03, 0x0c60, 0x1c41,
+  24:Src/vesc.c    **** 	0xedae, 0xfd8f, 0xcdec, 0xddcd, 0xad2a, 0xbd0b, 0x8d68, 0x9d49, 0x7e97,
+  25:Src/vesc.c    **** 	0x6eb6, 0x5ed5, 0x4ef4, 0x3e13, 0x2e32, 0x1e51, 0x0e70, 0xff9f, 0xefbe,
+  26:Src/vesc.c    **** 	0xdfdd, 0xcffc, 0xbf1b, 0xaf3a, 0x9f59, 0x8f78, 0x9188, 0x81a9, 0xb1ca,
+  27:Src/vesc.c    **** 	0xa1eb, 0xd10c, 0xc12d, 0xf14e, 0xe16f, 0x1080, 0x00a1, 0x30c2, 0x20e3,
+  28:Src/vesc.c    **** 	0x5004, 0x4025, 0x7046, 0x6067, 0x83b9, 0x9398, 0xa3fb, 0xb3da, 0xc33d,
+  29:Src/vesc.c    **** 	0xd31c, 0xe37f, 0xf35e, 0x02b1, 0x1290, 0x22f3, 0x32d2, 0x4235, 0x5214,
+  30:Src/vesc.c    **** 	0x6277, 0x7256, 0xb5ea, 0xa5cb, 0x95a8, 0x8589, 0xf56e, 0xe54f, 0xd52c,
+  31:Src/vesc.c    **** 	0xc50d, 0x34e2, 0x24c3, 0x14a0, 0x0481, 0x7466, 0x6447, 0x5424, 0x4405,
+  32:Src/vesc.c    **** 	0xa7db, 0xb7fa, 0x8799, 0x97b8, 0xe75f, 0xf77e, 0xc71d, 0xd73c, 0x26d3,
+  33:Src/vesc.c    **** 	0x36f2, 0x0691, 0x16b0, 0x6657, 0x7676, 0x4615, 0x5634, 0xd94c, 0xc96d,
+ARM GAS  /tmp/ccE0vHya.s 			page 2
+
+
+  34:Src/vesc.c    **** 	0xf90e, 0xe92f, 0x99c8, 0x89e9, 0xb98a, 0xa9ab, 0x5844, 0x4865, 0x7806,
+  35:Src/vesc.c    **** 	0x6827, 0x18c0, 0x08e1, 0x3882, 0x28a3, 0xcb7d, 0xdb5c, 0xeb3f, 0xfb1e,
+  36:Src/vesc.c    **** 	0x8bf9, 0x9bd8, 0xabbb, 0xbb9a, 0x4a75, 0x5a54, 0x6a37, 0x7a16, 0x0af1,
+  37:Src/vesc.c    **** 	0x1ad0, 0x2ab3, 0x3a92, 0xfd2e, 0xed0f, 0xdd6c, 0xcd4d, 0xbdaa, 0xad8b,
+  38:Src/vesc.c    **** 	0x9de8, 0x8dc9, 0x7c26, 0x6c07, 0x5c64, 0x4c45, 0x3ca2, 0x2c83, 0x1ce0,
+  39:Src/vesc.c    **** 	0x0cc1, 0xef1f, 0xff3e, 0xcf5d, 0xdf7c, 0xaf9b, 0xbfba, 0x8fd9, 0x9ff8,
+  40:Src/vesc.c    **** 	0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
+  41:Src/vesc.c    **** };
+  42:Src/vesc.c    **** 
+  43:Src/vesc.c    **** static uint16_t crc16(uint8_t *data, uint32_t n) {
+  26              		.loc 1 43 0
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 0
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30              		@ link register save eliminated.
+  31              	.LVL0:
+  32 0000 10B4     		push	{r4}
+  33              	.LCFI0:
+  34              		.cfi_def_cfa_offset 4
+  35              		.cfi_offset 4, -4
+  36              	.LVL1:
+  44:Src/vesc.c    **** 	uint16_t cksum = 0;
+  37              		.loc 1 44 0
+  38 0002 0023     		movs	r3, #0
+  45:Src/vesc.c    **** 	while (n--)
+  39              		.loc 1 45 0
+  40 0004 0AE0     		b	.L2
+  41              	.LVL2:
+  42              	.L3:
+  46:Src/vesc.c    **** 		cksum = (cksum << 8) ^ crc16Tab[(((cksum >> 8) ^ *data++) & 0xFF)];
+  43              		.loc 1 46 0
+  44 0006 0278     		ldrb	r2, [r0]	@ zero_extendqisi2
+  45 0008 82EA1322 		eor	r2, r2, r3, lsr #8
+  46 000c 0749     		ldr	r1, .L5
+  47 000e 31F81220 		ldrh	r2, [r1, r2, lsl #1]
+  48 0012 82EA0323 		eor	r3, r2, r3, lsl #8
+  49              	.LVL3:
+  50 0016 9BB2     		uxth	r3, r3
+  51              	.LVL4:
+  45:Src/vesc.c    **** 	while (n--)
+  52              		.loc 1 45 0
+  53 0018 2146     		mov	r1, r4
+  54              		.loc 1 46 0
+  55 001a 0130     		adds	r0, r0, #1
+  56              	.LVL5:
+  57              	.L2:
+  45:Src/vesc.c    **** 	while (n--)
+  58              		.loc 1 45 0
+  59 001c 4C1E     		subs	r4, r1, #1
+  60              	.LVL6:
+  61 001e 0029     		cmp	r1, #0
+  62 0020 F1D1     		bne	.L3
+  47:Src/vesc.c    **** 	return cksum;
+  48:Src/vesc.c    **** }
+  63              		.loc 1 48 0
+  64 0022 1846     		mov	r0, r3
+  65              	.LVL7:
+ARM GAS  /tmp/ccE0vHya.s 			page 3
+
+
+  66 0024 5DF8044B 		ldr	r4, [sp], #4
+  67              	.LCFI1:
+  68              		.cfi_restore 4
+  69              		.cfi_def_cfa_offset 0
+  70              	.LVL8:
+  71 0028 7047     		bx	lr
+  72              	.L6:
+  73 002a 00BF     		.align	2
+  74              	.L5:
+  75 002c 00000000 		.word	.LANCHOR0
+  76              		.cfi_endproc
+  77              	.LFE63:
+  79              		.section	.text.extract,"ax",%progbits
+  80              		.align	2
+  81              		.thumb
+  82              		.thumb_func
+  84              	extract:
+  85              	.LFB65:
+  49:Src/vesc.c    **** 
+  50:Src/vesc.c    **** static HAL_StatusTypeDef sendPayload(uint8_t n)
+  51:Src/vesc.c    **** {
+  52:Src/vesc.c    **** 	uint8_t* next = sendBuf;
+  53:Src/vesc.c    **** 
+  54:Src/vesc.c    **** 	*next++ = 2; //magic num start
+  55:Src/vesc.c    **** 	*next++ = n; //bytes payload
+  56:Src/vesc.c    **** 	for (int i = 0; i < n; ++i)
+  57:Src/vesc.c    **** 		*next++ = payload[i];
+  58:Src/vesc.c    **** 
+  59:Src/vesc.c    **** 	uint16_t crc = crc16(payload, n);
+  60:Src/vesc.c    **** 	*next++ = crc >> 8;
+  61:Src/vesc.c    **** 	*next++ = crc & 0xff;
+  62:Src/vesc.c    **** 
+  63:Src/vesc.c    **** 	*next++ = 3; //magic num end
+  64:Src/vesc.c    **** 
+  65:Src/vesc.c    **** 	HAL_NVIC_DisableIRQ(UART4_IRQn);
+  66:Src/vesc.c    **** 	__NOP();
+  67:Src/vesc.c    **** 	HAL_StatusTypeDef ret = HAL_UART_Transmit_IT(uart4Handle, sendBuf, next - sendBuf);
+  68:Src/vesc.c    **** 	HAL_NVIC_EnableIRQ(UART4_IRQn);
+  69:Src/vesc.c    **** 
+  70:Src/vesc.c    **** 	return ret;
+  71:Src/vesc.c    **** }
+  72:Src/vesc.c    **** 
+  73:Src/vesc.c    **** static int32_t extract(uint8_t** ptr, int n)
+  74:Src/vesc.c    **** {
+  86              		.loc 1 74 0
+  87              		.cfi_startproc
+  88              		@ args = 0, pretend = 0, frame = 0
+  89              		@ frame_needed = 0, uses_anonymous_args = 0
+  90              		@ link register save eliminated.
+  91              	.LVL9:
+  92 0000 30B4     		push	{r4, r5}
+  93              	.LCFI2:
+  94              		.cfi_def_cfa_offset 8
+  95              		.cfi_offset 4, -8
+  96              		.cfi_offset 5, -4
+  97 0002 0446     		mov	r4, r0
+  98              	.LVL10:
+ARM GAS  /tmp/ccE0vHya.s 			page 4
+
+
+  99              	.LBB5:
+  75:Src/vesc.c    **** 	int32_t ret = 0;
+  76:Src/vesc.c    **** 	for (int i = 0; i < n; ++i) {
+ 100              		.loc 1 76 0
+ 101 0004 0022     		movs	r2, #0
+ 102              	.LBE5:
+  75:Src/vesc.c    **** 	int32_t ret = 0;
+ 103              		.loc 1 75 0
+ 104 0006 1046     		mov	r0, r2
+ 105              	.LVL11:
+ 106              	.LBB6:
+ 107              		.loc 1 76 0
+ 108 0008 06E0     		b	.L8
+ 109              	.LVL12:
+ 110              	.L9:
+  77:Src/vesc.c    **** 		ret <<= 8;
+  78:Src/vesc.c    **** 		ret |= **ptr;
+ 111              		.loc 1 78 0 discriminator 3
+ 112 000a 2368     		ldr	r3, [r4]
+ 113 000c 13F8015B 		ldrb	r5, [r3], #1	@ zero_extendqisi2
+ 114 0010 45EA0020 		orr	r0, r5, r0, lsl #8
+ 115              	.LVL13:
+  79:Src/vesc.c    **** 		++(*ptr);
+ 116              		.loc 1 79 0 discriminator 3
+ 117 0014 2360     		str	r3, [r4]
+  76:Src/vesc.c    **** 		ret <<= 8;
+ 118              		.loc 1 76 0 discriminator 3
+ 119 0016 0132     		adds	r2, r2, #1
+ 120              	.LVL14:
+ 121              	.L8:
+  76:Src/vesc.c    **** 		ret <<= 8;
+ 122              		.loc 1 76 0 is_stmt 0 discriminator 1
+ 123 0018 8A42     		cmp	r2, r1
+ 124 001a F6DB     		blt	.L9
+ 125              	.LBE6:
+  80:Src/vesc.c    **** 	}
+  81:Src/vesc.c    **** 	return ret;
+  82:Src/vesc.c    **** }
+ 126              		.loc 1 82 0 is_stmt 1
+ 127 001c 30BC     		pop	{r4, r5}
+ 128              	.LCFI3:
+ 129              		.cfi_restore 5
+ 130              		.cfi_restore 4
+ 131              		.cfi_def_cfa_offset 0
+ 132              	.LVL15:
+ 133 001e 7047     		bx	lr
+ 134              		.cfi_endproc
+ 135              	.LFE65:
+ 137              		.section	.text.push,"ax",%progbits
+ 138              		.align	2
+ 139              		.thumb
+ 140              		.thumb_func
+ 142              	push:
+ 143              	.LFB66:
+  83:Src/vesc.c    **** 
+  84:Src/vesc.c    **** static void push(uint8_t** ptr, int n, uint32_t x)
+  85:Src/vesc.c    **** {
+ARM GAS  /tmp/ccE0vHya.s 			page 5
+
+
+ 144              		.loc 1 85 0
+ 145              		.cfi_startproc
+ 146              		@ args = 0, pretend = 0, frame = 0
+ 147              		@ frame_needed = 0, uses_anonymous_args = 0
+ 148              	.LVL16:
+  86:Src/vesc.c    **** 	if (n <= 0)
+ 149              		.loc 1 86 0
+ 150 0000 0029     		cmp	r1, #0
+ 151 0002 0EDD     		ble	.L15
+  85:Src/vesc.c    **** 	if (n <= 0)
+ 152              		.loc 1 85 0
+ 153 0004 38B5     		push	{r3, r4, r5, lr}
+ 154              	.LCFI4:
+ 155              		.cfi_def_cfa_offset 16
+ 156              		.cfi_offset 3, -16
+ 157              		.cfi_offset 4, -12
+ 158              		.cfi_offset 5, -8
+ 159              		.cfi_offset 14, -4
+ 160 0006 0446     		mov	r4, r0
+ 161 0008 1546     		mov	r5, r2
+  87:Src/vesc.c    **** 		return;
+  88:Src/vesc.c    **** 	//recursively push all bytes but last
+  89:Src/vesc.c    **** 	if (n > 1)
+ 162              		.loc 1 89 0
+ 163 000a 0129     		cmp	r1, #1
+ 164 000c 03DD     		ble	.L13
+  90:Src/vesc.c    **** 		push(ptr, n - 1, x >> 8);
+ 165              		.loc 1 90 0
+ 166 000e 0139     		subs	r1, r1, #1
+ 167              	.LVL17:
+ 168 0010 120A     		lsrs	r2, r2, #8
+ 169              	.LVL18:
+ 170 0012 FFF7F5FF 		bl	push
+ 171              	.LVL19:
+ 172              	.L13:
+  91:Src/vesc.c    **** 	**ptr = x & 0xff;
+ 173              		.loc 1 91 0
+ 174 0016 2368     		ldr	r3, [r4]
+ 175 0018 1D70     		strb	r5, [r3]
+  92:Src/vesc.c    **** 	++(*ptr);
+ 176              		.loc 1 92 0
+ 177 001a 2368     		ldr	r3, [r4]
+ 178 001c 0133     		adds	r3, r3, #1
+ 179 001e 2360     		str	r3, [r4]
+ 180 0020 38BD     		pop	{r3, r4, r5, pc}
+ 181              	.LVL20:
+ 182              	.L15:
+ 183              	.LCFI5:
+ 184              		.cfi_def_cfa_offset 0
+ 185              		.cfi_restore 3
+ 186              		.cfi_restore 4
+ 187              		.cfi_restore 5
+ 188              		.cfi_restore 14
+ 189 0022 7047     		bx	lr
+ 190              		.cfi_endproc
+ 191              	.LFE66:
+ 193              		.section	.text.processData,"ax",%progbits
+ARM GAS  /tmp/ccE0vHya.s 			page 6
+
+
+ 194              		.align	2
+ 195              		.thumb
+ 196              		.thumb_func
+ 198              	processData:
+ 199              	.LFB72:
+  93:Src/vesc.c    **** }
+  94:Src/vesc.c    **** 
+  95:Src/vesc.c    **** void vescInit()
+  96:Src/vesc.c    **** {
+  97:Src/vesc.c    **** 	HAL_UART_Receive_IT(uart4Handle, &uartBuffer, 1);
+  98:Src/vesc.c    **** }
+  99:Src/vesc.c    **** 
+ 100:Src/vesc.c    **** HAL_StatusTypeDef vescRequestValues()
+ 101:Src/vesc.c    **** {
+ 102:Src/vesc.c    **** 	vescNewValuesReady = 0;
+ 103:Src/vesc.c    **** 	payload[0] = VESC_COMMAND_GET_VALUES;
+ 104:Src/vesc.c    **** 	return sendPayload(1);
+ 105:Src/vesc.c    **** }
+ 106:Src/vesc.c    **** 
+ 107:Src/vesc.c    **** // might be useful:
+ 108:Src/vesc.c    **** //
+ 109:Src/vesc.c    **** // 	sprintf(out, "%ld: U:%d.%d flt:%d T:%d.%d pwm:%d%% I:%ldmA rpm:%ld\n",
+ 110:Src/vesc.c    **** // 			HAL_GetTick(),
+ 111:Src/vesc.c    **** // 			vescLastValues.vIn / 10,
+ 112:Src/vesc.c    **** // 			vescLastValues.vIn % 10,
+ 113:Src/vesc.c    **** // 			vescLastValues.fault,
+ 114:Src/vesc.c    **** // 			vescLastValues.tMosf[0] / 10,
+ 115:Src/vesc.c    **** // 			vescLastValues.tMosf[0] % 10,
+ 116:Src/vesc.c    **** // 			vescLastValues.dutyNow / 10,
+ 117:Src/vesc.c    **** // 			vescLastValues.currentMotor,
+ 118:Src/vesc.c    **** // 			vescLastValues.erpm / 7);
+ 119:Src/vesc.c    **** // 	serialPrintStr(out);
+ 120:Src/vesc.c    **** 
+ 121:Src/vesc.c    **** HAL_StatusTypeDef vescSetPwm(int16_t permille)
+ 122:Src/vesc.c    **** {
+ 123:Src/vesc.c    **** 	if (permille < -1000)
+ 124:Src/vesc.c    **** 		permille = -1000;
+ 125:Src/vesc.c    **** 	if (permille > 1000)
+ 126:Src/vesc.c    **** 		permille = 1000;
+ 127:Src/vesc.c    **** 	uint8_t* toWrite = payload;
+ 128:Src/vesc.c    **** 	push(&toWrite, 1, VESC_COMMAND_SET_DUTY);
+ 129:Src/vesc.c    **** 	push(&toWrite, 4, permille * 100); //*100 vesc protocol
+ 130:Src/vesc.c    **** 	return sendPayload(toWrite - payload);
+ 131:Src/vesc.c    **** }
+ 132:Src/vesc.c    **** 
+ 133:Src/vesc.c    **** HAL_StatusTypeDef vescSetCurrent(int32_t mA)
+ 134:Src/vesc.c    **** {
+ 135:Src/vesc.c    **** 	uint8_t* toWrite = payload;
+ 136:Src/vesc.c    **** 	push(&toWrite, 1, VESC_COMMAND_SET_CURRENT);
+ 137:Src/vesc.c    **** 	push(&toWrite, 4, mA);
+ 138:Src/vesc.c    **** 	return sendPayload(toWrite - payload);
+ 139:Src/vesc.c    **** }
+ 140:Src/vesc.c    **** 
+ 141:Src/vesc.c    **** HAL_StatusTypeDef vescSetERPM(int32_t erpm)
+ 142:Src/vesc.c    **** {
+ 143:Src/vesc.c    **** 	uint8_t* toWrite = payload;
+ 144:Src/vesc.c    **** 	push(&toWrite, 1, VESC_COMMAND_SET_RPM);
+ARM GAS  /tmp/ccE0vHya.s 			page 7
+
+
+ 145:Src/vesc.c    **** 	push(&toWrite, 4, erpm);
+ 146:Src/vesc.c    **** 	return sendPayload(toWrite - payload);
+ 147:Src/vesc.c    **** }
+ 148:Src/vesc.c    **** 
+ 149:Src/vesc.c    **** static void processData()
+ 150:Src/vesc.c    **** {
+ 200              		.loc 1 150 0
+ 201              		.cfi_startproc
+ 202              		@ args = 0, pretend = 0, frame = 8
+ 203              		@ frame_needed = 0, uses_anonymous_args = 0
+ 151:Src/vesc.c    **** 	uint8_t* toRead = incData;
+ 204              		.loc 1 151 0
+ 205 0000 314B     		ldr	r3, .L22
+ 152:Src/vesc.c    **** 	if (*toRead == VESC_COMMAND_GET_VALUES) {
+ 206              		.loc 1 152 0
+ 207 0002 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 208 0004 042B     		cmp	r3, #4
+ 209 0006 5DD1     		bne	.L21
+ 150:Src/vesc.c    **** 	uint8_t* toRead = incData;
+ 210              		.loc 1 150 0
+ 211 0008 10B5     		push	{r4, lr}
+ 212              	.LCFI6:
+ 213              		.cfi_def_cfa_offset 8
+ 214              		.cfi_offset 4, -8
+ 215              		.cfi_offset 14, -4
+ 216 000a 82B0     		sub	sp, sp, #8
+ 217              	.LCFI7:
+ 218              		.cfi_def_cfa_offset 16
+ 153:Src/vesc.c    **** 		++toRead;
+ 219              		.loc 1 153 0
+ 220 000c 2F4B     		ldr	r3, .L22+4
+ 221 000e 0193     		str	r3, [sp, #4]
+ 222              	.LVL21:
+ 223              	.LBB7:
+ 154:Src/vesc.c    **** 		//NOTICE todo remove magic numbers (2,4 are bytes number, 10 are for getting mA)
+ 155:Src/vesc.c    **** 		for (int i = 0; i < 6; ++i)
+ 224              		.loc 1 155 0
+ 225 0010 0024     		movs	r4, #0
+ 226 0012 07E0     		b	.L18
+ 227              	.LVL22:
+ 228              	.L19:
+ 156:Src/vesc.c    **** 			vescLastValues.tMosf[i] = extract(&toRead, 2);
+ 229              		.loc 1 156 0 discriminator 3
+ 230 0014 01A8     		add	r0, sp, #4
+ 231 0016 0221     		movs	r1, #2
+ 232 0018 FFF7FEFF 		bl	extract
+ 233              	.LVL23:
+ 234 001c 2C4B     		ldr	r3, .L22+8
+ 235 001e 23F81400 		strh	r0, [r3, r4, lsl #1]	@ movhi
+ 155:Src/vesc.c    **** 			vescLastValues.tMosf[i] = extract(&toRead, 2);
+ 236              		.loc 1 155 0 discriminator 3
+ 237 0022 0134     		adds	r4, r4, #1
+ 238              	.LVL24:
+ 239              	.L18:
+ 155:Src/vesc.c    **** 			vescLastValues.tMosf[i] = extract(&toRead, 2);
+ 240              		.loc 1 155 0 is_stmt 0 discriminator 1
+ 241 0024 052C     		cmp	r4, #5
+ARM GAS  /tmp/ccE0vHya.s 			page 8
+
+
+ 242 0026 F5DD     		ble	.L19
+ 243              	.LBE7:
+ 157:Src/vesc.c    **** 		vescLastValues.tPcb = extract(&toRead, 2);
+ 244              		.loc 1 157 0 is_stmt 1
+ 245 0028 01A8     		add	r0, sp, #4
+ 246 002a 0221     		movs	r1, #2
+ 247 002c FFF7FEFF 		bl	extract
+ 248              	.LVL25:
+ 249 0030 274C     		ldr	r4, .L22+8
+ 250              	.LVL26:
+ 251 0032 A081     		strh	r0, [r4, #12]	@ movhi
+ 158:Src/vesc.c    **** 		vescLastValues.currentMotor = extract(&toRead, 4) * 10;
+ 252              		.loc 1 158 0
+ 253 0034 01A8     		add	r0, sp, #4
+ 254 0036 0421     		movs	r1, #4
+ 255 0038 FFF7FEFF 		bl	extract
+ 256              	.LVL27:
+ 257 003c 00EB8000 		add	r0, r0, r0, lsl #2
+ 258 0040 4000     		lsls	r0, r0, #1
+ 259 0042 2061     		str	r0, [r4, #16]
+ 159:Src/vesc.c    **** 		vescLastValues.currentBatt = extract(&toRead, 4) * 10;
+ 260              		.loc 1 159 0
+ 261 0044 01A8     		add	r0, sp, #4
+ 262 0046 0421     		movs	r1, #4
+ 263 0048 FFF7FEFF 		bl	extract
+ 264              	.LVL28:
+ 265 004c 00EB8000 		add	r0, r0, r0, lsl #2
+ 266 0050 4000     		lsls	r0, r0, #1
+ 267 0052 6061     		str	r0, [r4, #20]
+ 160:Src/vesc.c    **** 		vescLastValues.dutyNow = extract(&toRead, 2);
+ 268              		.loc 1 160 0
+ 269 0054 01A8     		add	r0, sp, #4
+ 270 0056 0221     		movs	r1, #2
+ 271 0058 FFF7FEFF 		bl	extract
+ 272              	.LVL29:
+ 273 005c 2083     		strh	r0, [r4, #24]	@ movhi
+ 161:Src/vesc.c    **** 		vescLastValues.erpm = extract(&toRead, 4);
+ 274              		.loc 1 161 0
+ 275 005e 01A8     		add	r0, sp, #4
+ 276 0060 0421     		movs	r1, #4
+ 277 0062 FFF7FEFF 		bl	extract
+ 278              	.LVL30:
+ 279 0066 E061     		str	r0, [r4, #28]
+ 162:Src/vesc.c    **** 		vescLastValues.vIn = extract(&toRead, 2);
+ 280              		.loc 1 162 0
+ 281 0068 01A8     		add	r0, sp, #4
+ 282 006a 0221     		movs	r1, #2
+ 283 006c FFF7FEFF 		bl	extract
+ 284              	.LVL31:
+ 285 0070 2084     		strh	r0, [r4, #32]	@ movhi
+ 163:Src/vesc.c    **** 		vescLastValues.ampHours = extract(&toRead, 4);
+ 286              		.loc 1 163 0
+ 287 0072 01A8     		add	r0, sp, #4
+ 288 0074 0421     		movs	r1, #4
+ 289 0076 FFF7FEFF 		bl	extract
+ 290              	.LVL32:
+ 291 007a 6062     		str	r0, [r4, #36]
+ARM GAS  /tmp/ccE0vHya.s 			page 9
+
+
+ 164:Src/vesc.c    **** 		vescLastValues.ampHoursCharged = extract(&toRead, 4);
+ 292              		.loc 1 164 0
+ 293 007c 01A8     		add	r0, sp, #4
+ 294 007e 0421     		movs	r1, #4
+ 295 0080 FFF7FEFF 		bl	extract
+ 296              	.LVL33:
+ 297 0084 A062     		str	r0, [r4, #40]
+ 165:Src/vesc.c    **** 		vescLastValues.wattHours = extract(&toRead, 4);
+ 298              		.loc 1 165 0
+ 299 0086 01A8     		add	r0, sp, #4
+ 300 0088 0421     		movs	r1, #4
+ 301 008a FFF7FEFF 		bl	extract
+ 302              	.LVL34:
+ 303 008e E062     		str	r0, [r4, #44]
+ 166:Src/vesc.c    **** 		vescLastValues.wattHoursCharged = extract(&toRead, 4);
+ 304              		.loc 1 166 0
+ 305 0090 01A8     		add	r0, sp, #4
+ 306 0092 0421     		movs	r1, #4
+ 307 0094 FFF7FEFF 		bl	extract
+ 308              	.LVL35:
+ 309 0098 2063     		str	r0, [r4, #48]
+ 167:Src/vesc.c    **** 		vescLastValues.tacho = extract(&toRead, 4);
+ 310              		.loc 1 167 0
+ 311 009a 01A8     		add	r0, sp, #4
+ 312 009c 0421     		movs	r1, #4
+ 313 009e FFF7FEFF 		bl	extract
+ 314              	.LVL36:
+ 315 00a2 6063     		str	r0, [r4, #52]
+ 168:Src/vesc.c    **** 		vescLastValues.tachoAbs = extract(&toRead, 4);
+ 316              		.loc 1 168 0
+ 317 00a4 01A8     		add	r0, sp, #4
+ 318 00a6 0421     		movs	r1, #4
+ 319 00a8 FFF7FEFF 		bl	extract
+ 320              	.LVL37:
+ 321 00ac A063     		str	r0, [r4, #56]
+ 169:Src/vesc.c    **** 		vescLastValues.fault = extract(&toRead, 1);
+ 322              		.loc 1 169 0
+ 323 00ae 01A8     		add	r0, sp, #4
+ 324 00b0 0121     		movs	r1, #1
+ 325 00b2 FFF7FEFF 		bl	extract
+ 326              	.LVL38:
+ 327 00b6 84F83C00 		strb	r0, [r4, #60]
+ 170:Src/vesc.c    **** 
+ 171:Src/vesc.c    **** 		vescNewValuesReady = 1;
+ 328              		.loc 1 171 0
+ 329 00ba 0122     		movs	r2, #1
+ 330 00bc 054B     		ldr	r3, .L22+12
+ 331 00be 1A70     		strb	r2, [r3]
+ 172:Src/vesc.c    **** 	}
+ 173:Src/vesc.c    **** }
+ 332              		.loc 1 173 0
+ 333 00c0 02B0     		add	sp, sp, #8
+ 334              	.LCFI8:
+ 335              		.cfi_def_cfa_offset 8
+ 336              		@ sp needed
+ 337 00c2 10BD     		pop	{r4, pc}
+ 338              	.L21:
+ARM GAS  /tmp/ccE0vHya.s 			page 10
+
+
+ 339              	.LCFI9:
+ 340              		.cfi_def_cfa_offset 0
+ 341              		.cfi_restore 4
+ 342              		.cfi_restore 14
+ 343 00c4 7047     		bx	lr
+ 344              	.L23:
+ 345 00c6 00BF     		.align	2
+ 346              	.L22:
+ 347 00c8 00000000 		.word	.LANCHOR1
+ 348 00cc 01000000 		.word	.LANCHOR1+1
+ 349 00d0 00000000 		.word	vescLastValues
+ 350 00d4 00000000 		.word	vescNewValuesReady
+ 351              		.cfi_endproc
+ 352              	.LFE72:
+ 354              		.section	.text.sendPayload,"ax",%progbits
+ 355              		.align	2
+ 356              		.thumb
+ 357              		.thumb_func
+ 359              	sendPayload:
+ 360              	.LFB64:
+  51:Src/vesc.c    **** 	uint8_t* next = sendBuf;
+ 361              		.loc 1 51 0
+ 362              		.cfi_startproc
+ 363              		@ args = 0, pretend = 0, frame = 0
+ 364              		@ frame_needed = 0, uses_anonymous_args = 0
+ 365              	.LVL39:
+ 366 0000 38B5     		push	{r3, r4, r5, lr}
+ 367              	.LCFI10:
+ 368              		.cfi_def_cfa_offset 16
+ 369              		.cfi_offset 3, -16
+ 370              		.cfi_offset 4, -12
+ 371              		.cfi_offset 5, -8
+ 372              		.cfi_offset 14, -4
+ 373 0002 0146     		mov	r1, r0
+ 374              	.LVL40:
+  54:Src/vesc.c    **** 	*next++ = n; //bytes payload
+ 375              		.loc 1 54 0
+ 376 0004 134C     		ldr	r4, .L28
+ 377 0006 0223     		movs	r3, #2
+ 378 0008 2370     		strb	r3, [r4]
+ 379              	.LVL41:
+  55:Src/vesc.c    **** 	for (int i = 0; i < n; ++i)
+ 380              		.loc 1 55 0
+ 381 000a 6070     		strb	r0, [r4, #1]
+ 382              	.LVL42:
+ 383              	.LBB8:
+  56:Src/vesc.c    **** 		*next++ = payload[i];
+ 384              		.loc 1 56 0
+ 385 000c 0023     		movs	r3, #0
+ 386              	.LBE8:
+  55:Src/vesc.c    **** 	for (int i = 0; i < n; ++i)
+ 387              		.loc 1 55 0
+ 388 000e 0234     		adds	r4, r4, #2
+ 389              	.LBB9:
+  56:Src/vesc.c    **** 		*next++ = payload[i];
+ 390              		.loc 1 56 0
+ 391 0010 04E0     		b	.L25
+ARM GAS  /tmp/ccE0vHya.s 			page 11
+
+
+ 392              	.LVL43:
+ 393              	.L26:
+  57:Src/vesc.c    **** 
+ 394              		.loc 1 57 0 discriminator 3
+ 395 0012 114A     		ldr	r2, .L28+4
+ 396 0014 D25C     		ldrb	r2, [r2, r3]	@ zero_extendqisi2
+ 397 0016 2270     		strb	r2, [r4]
+  56:Src/vesc.c    **** 		*next++ = payload[i];
+ 398              		.loc 1 56 0 discriminator 3
+ 399 0018 0133     		adds	r3, r3, #1
+ 400              	.LVL44:
+  57:Src/vesc.c    **** 
+ 401              		.loc 1 57 0 discriminator 3
+ 402 001a 0134     		adds	r4, r4, #1
+ 403              	.LVL45:
+ 404              	.L25:
+  56:Src/vesc.c    **** 		*next++ = payload[i];
+ 405              		.loc 1 56 0 discriminator 1
+ 406 001c 9942     		cmp	r1, r3
+ 407 001e F8DC     		bgt	.L26
+ 408              	.LBE9:
+  59:Src/vesc.c    **** 	*next++ = crc >> 8;
+ 409              		.loc 1 59 0
+ 410 0020 0D48     		ldr	r0, .L28+4
+ 411              	.LVL46:
+ 412 0022 FFF7FEFF 		bl	crc16
+ 413              	.LVL47:
+  60:Src/vesc.c    **** 	*next++ = crc & 0xff;
+ 414              		.loc 1 60 0
+ 415 0026 030A     		lsrs	r3, r0, #8
+ 416 0028 2370     		strb	r3, [r4]
+ 417              	.LVL48:
+  61:Src/vesc.c    **** 
+ 418              		.loc 1 61 0
+ 419 002a 6070     		strb	r0, [r4, #1]
+  63:Src/vesc.c    **** 
+ 420              		.loc 1 63 0
+ 421 002c E51C     		adds	r5, r4, #3
+ 422              	.LVL49:
+ 423 002e 0323     		movs	r3, #3
+ 424 0030 A370     		strb	r3, [r4, #2]
+  65:Src/vesc.c    **** 	__NOP();
+ 425              		.loc 1 65 0
+ 426 0032 3420     		movs	r0, #52
+ 427              	.LVL50:
+ 428 0034 FFF7FEFF 		bl	HAL_NVIC_DisableIRQ
+ 429              	.LVL51:
+ 430              	.LBB10:
+ 431              	.LBB11:
+ 432              		.file 2 "../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h"
+   1:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**************************************************************************//**
+   2:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * @file     cmsis_gcc.h
+   3:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * @brief    CMSIS Cortex-M Core Function/Instruction Header File
+   4:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * @version  V4.30
+   5:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * @date     20. October 2015
+   6:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  ******************************************************************************/
+   7:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* Copyright (c) 2009 - 2015 ARM LIMITED
+ARM GAS  /tmp/ccE0vHya.s 			page 12
+
+
+   8:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+   9:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    All rights reserved.
+  10:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    Redistribution and use in source and binary forms, with or without
+  11:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    modification, are permitted provided that the following conditions are met:
+  12:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    - Redistributions of source code must retain the above copyright
+  13:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      notice, this list of conditions and the following disclaimer.
+  14:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    - Redistributions in binary form must reproduce the above copyright
+  15:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      notice, this list of conditions and the following disclaimer in the
+  16:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      documentation and/or other materials provided with the distribution.
+  17:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    - Neither the name of ARM nor the names of its contributors may be used
+  18:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      to endorse or promote products derived from this software without
+  19:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      specific prior written permission.
+  20:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    *
+  21:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS AND CONTRIBUTORS BE
+  25:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    POSSIBILITY OF SUCH DAMAGE.
+  32:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    ---------------------------------------------------------------------------*/
+  33:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  34:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  35:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef __CMSIS_GCC_H
+  36:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_H
+  37:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  38:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* ignore some GCC warnings */
+  39:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if defined ( __GNUC__ )
+  40:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic push
+  41:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wsign-conversion"
+  42:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wconversion"
+  43:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wunused-parameter"
+  44:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  45:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  46:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  47:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* ###########################  Core Function Access  ########################### */
+  48:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /** \ingroup  CMSIS_Core_FunctionInterface
+  49:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****     \defgroup CMSIS_Core_RegAccFunctions CMSIS Core Register Access Functions
+  50:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   @{
+  51:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  52:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  53:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+  54:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Enable IRQ Interrupts
+  55:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Enables IRQ interrupts by clearing the I-bit in the CPSR.
+  56:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****            Can only be executed in Privileged modes.
+  57:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  58:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __enable_irq(void)
+  59:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+  60:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsie i" : : : "memory");
+  61:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+  62:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  63:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  64:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ARM GAS  /tmp/ccE0vHya.s 			page 13
+
+
+  65:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Disable IRQ Interrupts
+  66:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Disables IRQ interrupts by setting the I-bit in the CPSR.
+  67:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   Can only be executed in Privileged modes.
+  68:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  69:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __disable_irq(void)
+  70:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+  71:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsid i" : : : "memory");
+  72:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+  73:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  74:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  75:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+  76:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Control Register
+  77:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the content of the Control Register.
+  78:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Control Register value
+  79:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  80:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_CONTROL(void)
+  81:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+  82:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+  83:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  84:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, control" : "=r" (result) );
+  85:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+  86:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+  87:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  88:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  89:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+  90:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Control Register
+  91:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Writes the given value to the Control Register.
+  92:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    control  Control Register value to set
+  93:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  94:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_CONTROL(uint32_t control)
+  95:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+  96:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR control, %0" : : "r" (control) : "memory");
+  97:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+  98:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  99:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 100:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 101:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get IPSR Register
+ 102:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the content of the IPSR Register.
+ 103:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               IPSR Register value
+ 104:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 105:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_IPSR(void)
+ 106:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 107:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 108:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 109:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, ipsr" : "=r" (result) );
+ 110:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 111:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 112:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 113:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 114:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 115:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get APSR Register
+ 116:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the content of the APSR Register.
+ 117:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               APSR Register value
+ 118:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 119:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_APSR(void)
+ 120:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 121:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ARM GAS  /tmp/ccE0vHya.s 			page 14
+
+
+ 122:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 123:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, apsr" : "=r" (result) );
+ 124:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 125:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 126:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 127:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 128:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 129:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get xPSR Register
+ 130:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the content of the xPSR Register.
+ 131:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 132:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****     \return               xPSR Register value
+ 133:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 134:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_xPSR(void)
+ 135:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 136:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 137:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 138:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, xpsr" : "=r" (result) );
+ 139:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 140:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 141:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 142:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 143:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 144:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Process Stack Pointer
+ 145:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Process Stack Pointer (PSP).
+ 146:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               PSP Register value
+ 147:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 148:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_PSP(void)
+ 149:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 150:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   register uint32_t result;
+ 151:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 152:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, psp\n"  : "=r" (result) );
+ 153:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 154:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 155:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 156:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 157:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 158:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Process Stack Pointer
+ 159:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Process Stack Pointer (PSP).
+ 160:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    topOfProcStack  Process Stack Pointer value to set
+ 161:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 162:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_PSP(uint32_t topOfProcStack)
+ 163:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 164:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR psp, %0\n" : : "r" (topOfProcStack) : "sp");
+ 165:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 166:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 167:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 168:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 169:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Main Stack Pointer
+ 170:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Main Stack Pointer (MSP).
+ 171:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               MSP Register value
+ 172:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 173:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_MSP(void)
+ 174:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 175:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   register uint32_t result;
+ 176:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 177:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, msp\n" : "=r" (result) );
+ 178:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ARM GAS  /tmp/ccE0vHya.s 			page 15
+
+
+ 179:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 180:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 181:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 182:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 183:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Main Stack Pointer
+ 184:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Main Stack Pointer (MSP).
+ 185:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 186:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****     \param [in]    topOfMainStack  Main Stack Pointer value to set
+ 187:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 188:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_MSP(uint32_t topOfMainStack)
+ 189:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 190:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR msp, %0\n" : : "r" (topOfMainStack) : "sp");
+ 191:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 192:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 193:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 194:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 195:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Priority Mask
+ 196:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current state of the priority mask bit from the Priority Mask Register.
+ 197:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Priority Mask value
+ 198:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 199:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_PRIMASK(void)
+ 200:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 201:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 202:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 203:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, primask" : "=r" (result) );
+ 204:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 205:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 206:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 207:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 208:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 209:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Priority Mask
+ 210:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Priority Mask Register.
+ 211:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    priMask  Priority Mask
+ 212:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 213:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_PRIMASK(uint32_t priMask)
+ 214:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 215:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR primask, %0" : : "r" (priMask) : "memory");
+ 216:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 217:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 218:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 219:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if       (__CORTEX_M >= 0x03U)
+ 220:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 221:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 222:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Enable FIQ
+ 223:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Enables FIQ interrupts by clearing the F-bit in the CPSR.
+ 224:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****            Can only be executed in Privileged modes.
+ 225:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 226:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __enable_fault_irq(void)
+ 227:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 228:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsie f" : : : "memory");
+ 229:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 230:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 231:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 232:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 233:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Disable FIQ
+ 234:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Disables FIQ interrupts by setting the F-bit in the CPSR.
+ 235:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****            Can only be executed in Privileged modes.
+ARM GAS  /tmp/ccE0vHya.s 			page 16
+
+
+ 236:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 237:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __disable_fault_irq(void)
+ 238:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 239:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsid f" : : : "memory");
+ 240:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 241:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 242:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 243:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 244:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Base Priority
+ 245:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Base Priority register.
+ 246:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Base Priority register value
+ 247:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 248:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_BASEPRI(void)
+ 249:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 250:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 251:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 252:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, basepri" : "=r" (result) );
+ 253:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 254:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 255:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 256:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 257:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 258:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Base Priority
+ 259:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Base Priority register.
+ 260:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    basePri  Base Priority value to set
+ 261:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 262:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_BASEPRI(uint32_t value)
+ 263:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 264:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR basepri, %0" : : "r" (value) : "memory");
+ 265:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 266:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 267:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 268:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 269:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Base Priority with condition
+ 270:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Base Priority register only if BASEPRI masking is disable
+ 271:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****            or the new value increases the BASEPRI priority level.
+ 272:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    basePri  Base Priority value to set
+ 273:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 274:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_BASEPRI_MAX(uint32_t value)
+ 275:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 276:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR basepri_max, %0" : : "r" (value) : "memory");
+ 277:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 278:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 279:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 280:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 281:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Fault Mask
+ 282:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Fault Mask register.
+ 283:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Fault Mask register value
+ 284:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 285:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_FAULTMASK(void)
+ 286:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 287:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 288:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 289:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, faultmask" : "=r" (result) );
+ 290:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 291:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 292:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ARM GAS  /tmp/ccE0vHya.s 			page 17
+
+
+ 293:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 294:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 295:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Fault Mask
+ 296:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Fault Mask register.
+ 297:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    faultMask  Fault Mask value to set
+ 298:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 299:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_FAULTMASK(uint32_t faultMask)
+ 300:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 301:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR faultmask, %0" : : "r" (faultMask) : "memory");
+ 302:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 303:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 304:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif /* (__CORTEX_M >= 0x03U) */
+ 305:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 306:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 307:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if       (__CORTEX_M == 0x04U) || (__CORTEX_M == 0x07U)
+ 308:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 309:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 310:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get FPSCR
+ 311:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Floating Point Status/Control register.
+ 312:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Floating Point Status/Control register value
+ 313:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 314:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_FPSCR(void)
+ 315:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 316:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if (__FPU_PRESENT == 1U) && (__FPU_USED == 1U)
+ 317:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 318:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 319:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   /* Empty asm statement works as a scheduling barrier */
+ 320:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("");
+ 321:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("VMRS %0, fpscr" : "=r" (result) );
+ 322:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("");
+ 323:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 324:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #else
+ 325:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    return(0);
+ 326:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 327:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 328:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 329:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 330:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 331:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set FPSCR
+ 332:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Floating Point Status/Control register.
+ 333:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    fpscr  Floating Point Status/Control value to set
+ 334:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 335:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_FPSCR(uint32_t fpscr)
+ 336:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 337:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if (__FPU_PRESENT == 1U) && (__FPU_USED == 1U)
+ 338:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   /* Empty asm statement works as a scheduling barrier */
+ 339:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("");
+ 340:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("VMSR fpscr, %0" : : "r" (fpscr) : "vfpcc");
+ 341:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("");
+ 342:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 343:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 344:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 345:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif /* (__CORTEX_M == 0x04U) || (__CORTEX_M == 0x07U) */
+ 346:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 347:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 348:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 349:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /*@} end of CMSIS_Core_RegAccFunctions */
+ARM GAS  /tmp/ccE0vHya.s 			page 18
+
+
+ 350:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 351:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 352:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* ##########################  Core Instruction Access  ######################### */
+ 353:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /** \defgroup CMSIS_Core_InstructionInterface CMSIS Core Instruction Interface
+ 354:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   Access to dedicated instructions
+ 355:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   @{
+ 356:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** */
+ 357:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 358:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* Define macros for porting to both thumb1 and thumb2.
+ 359:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * For thumb1, use low register (r0-r7), specified by constraint "l"
+ 360:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * Otherwise, use general registers, specified by constraint "r" */
+ 361:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if defined (__thumb__) && !defined (__thumb2__)
+ 362:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_OUT_REG(r) "=l" (r)
+ 363:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_USE_REG(r) "l" (r)
+ 364:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #else
+ 365:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_OUT_REG(r) "=r" (r)
+ 366:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_USE_REG(r) "r" (r)
+ 367:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 368:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 369:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 370:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   No Operation
+ 371:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details No Operation does nothing. This instruction can be used for code alignment purposes.
+ 372:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 373:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__((always_inline)) __STATIC_INLINE void __NOP(void)
+ 374:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 375:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("nop");
+ 433              		.loc 2 375 0
+ 434              	@ 375 "../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h" 1
+ 435 0038 00BF     		nop
+ 436              	@ 0 "" 2
+ 437              		.thumb
+ 438              	.LBE11:
+ 439              	.LBE10:
+  67:Src/vesc.c    **** 	HAL_NVIC_EnableIRQ(UART4_IRQn);
+ 440              		.loc 1 67 0
+ 441 003a 0649     		ldr	r1, .L28
+ 442 003c 6A1A     		subs	r2, r5, r1
+ 443 003e 074B     		ldr	r3, .L28+8
+ 444 0040 1868     		ldr	r0, [r3]
+ 445 0042 92B2     		uxth	r2, r2
+ 446 0044 FFF7FEFF 		bl	HAL_UART_Transmit_IT
+ 447              	.LVL52:
+ 448 0048 0446     		mov	r4, r0
+ 449              	.LVL53:
+  68:Src/vesc.c    **** 
+ 450              		.loc 1 68 0
+ 451 004a 3420     		movs	r0, #52
+ 452 004c FFF7FEFF 		bl	HAL_NVIC_EnableIRQ
+ 453              	.LVL54:
+  71:Src/vesc.c    **** 
+ 454              		.loc 1 71 0
+ 455 0050 2046     		mov	r0, r4
+ 456 0052 38BD     		pop	{r3, r4, r5, pc}
+ 457              	.LVL55:
+ 458              	.L29:
+ 459              		.align	2
+ 460              	.L28:
+ARM GAS  /tmp/ccE0vHya.s 			page 19
+
+
+ 461 0054 00000000 		.word	.LANCHOR2
+ 462 0058 00000000 		.word	.LANCHOR3
+ 463 005c 00000000 		.word	uart4Handle
+ 464              		.cfi_endproc
+ 465              	.LFE64:
+ 467              		.section	.text.vescInit,"ax",%progbits
+ 468              		.align	2
+ 469              		.global	vescInit
+ 470              		.thumb
+ 471              		.thumb_func
+ 473              	vescInit:
+ 474              	.LFB67:
+  96:Src/vesc.c    **** 	HAL_UART_Receive_IT(uart4Handle, &uartBuffer, 1);
+ 475              		.loc 1 96 0
+ 476              		.cfi_startproc
+ 477              		@ args = 0, pretend = 0, frame = 0
+ 478              		@ frame_needed = 0, uses_anonymous_args = 0
+ 479 0000 08B5     		push	{r3, lr}
+ 480              	.LCFI11:
+ 481              		.cfi_def_cfa_offset 8
+ 482              		.cfi_offset 3, -8
+ 483              		.cfi_offset 14, -4
+  97:Src/vesc.c    **** }
+ 484              		.loc 1 97 0
+ 485 0002 034B     		ldr	r3, .L32
+ 486 0004 1868     		ldr	r0, [r3]
+ 487 0006 0349     		ldr	r1, .L32+4
+ 488 0008 0122     		movs	r2, #1
+ 489 000a FFF7FEFF 		bl	HAL_UART_Receive_IT
+ 490              	.LVL56:
+ 491 000e 08BD     		pop	{r3, pc}
+ 492              	.L33:
+ 493              		.align	2
+ 494              	.L32:
+ 495 0010 00000000 		.word	uart4Handle
+ 496 0014 00000000 		.word	.LANCHOR4
+ 497              		.cfi_endproc
+ 498              	.LFE67:
+ 500              		.section	.text.vescRequestValues,"ax",%progbits
+ 501              		.align	2
+ 502              		.global	vescRequestValues
+ 503              		.thumb
+ 504              		.thumb_func
+ 506              	vescRequestValues:
+ 507              	.LFB68:
+ 101:Src/vesc.c    **** 	vescNewValuesReady = 0;
+ 508              		.loc 1 101 0
+ 509              		.cfi_startproc
+ 510              		@ args = 0, pretend = 0, frame = 0
+ 511              		@ frame_needed = 0, uses_anonymous_args = 0
+ 512 0000 08B5     		push	{r3, lr}
+ 513              	.LCFI12:
+ 514              		.cfi_def_cfa_offset 8
+ 515              		.cfi_offset 3, -8
+ 516              		.cfi_offset 14, -4
+ 102:Src/vesc.c    **** 	payload[0] = VESC_COMMAND_GET_VALUES;
+ 517              		.loc 1 102 0
+ARM GAS  /tmp/ccE0vHya.s 			page 20
+
+
+ 518 0002 0022     		movs	r2, #0
+ 519 0004 044B     		ldr	r3, .L36
+ 520 0006 1A70     		strb	r2, [r3]
+ 103:Src/vesc.c    **** 	return sendPayload(1);
+ 521              		.loc 1 103 0
+ 522 0008 0422     		movs	r2, #4
+ 523 000a 044B     		ldr	r3, .L36+4
+ 524 000c 1A70     		strb	r2, [r3]
+ 104:Src/vesc.c    **** }
+ 525              		.loc 1 104 0
+ 526 000e 0120     		movs	r0, #1
+ 527 0010 FFF7FEFF 		bl	sendPayload
+ 528              	.LVL57:
+ 105:Src/vesc.c    **** 
+ 529              		.loc 1 105 0
+ 530 0014 08BD     		pop	{r3, pc}
+ 531              	.L37:
+ 532 0016 00BF     		.align	2
+ 533              	.L36:
+ 534 0018 00000000 		.word	vescNewValuesReady
+ 535 001c 00000000 		.word	.LANCHOR3
+ 536              		.cfi_endproc
+ 537              	.LFE68:
+ 539              		.section	.text.vescSetPwm,"ax",%progbits
+ 540              		.align	2
+ 541              		.global	vescSetPwm
+ 542              		.thumb
+ 543              		.thumb_func
+ 545              	vescSetPwm:
+ 546              	.LFB69:
+ 122:Src/vesc.c    **** 	if (permille < -1000)
+ 547              		.loc 1 122 0
+ 548              		.cfi_startproc
+ 549              		@ args = 0, pretend = 0, frame = 8
+ 550              		@ frame_needed = 0, uses_anonymous_args = 0
+ 551              	.LVL58:
+ 552 0000 70B5     		push	{r4, r5, r6, lr}
+ 553              	.LCFI13:
+ 554              		.cfi_def_cfa_offset 16
+ 555              		.cfi_offset 4, -16
+ 556              		.cfi_offset 5, -12
+ 557              		.cfi_offset 6, -8
+ 558              		.cfi_offset 14, -4
+ 559 0002 82B0     		sub	sp, sp, #8
+ 560              	.LCFI14:
+ 561              		.cfi_def_cfa_offset 24
+ 562 0004 0446     		mov	r4, r0
+ 123:Src/vesc.c    **** 		permille = -1000;
+ 563              		.loc 1 123 0
+ 564 0006 10F57A7F 		cmn	r0, #1000
+ 565 000a 00DA     		bge	.L39
+ 124:Src/vesc.c    **** 	if (permille > 1000)
+ 566              		.loc 1 124 0
+ 567 000c 0E4C     		ldr	r4, .L44
+ 568              	.L39:
+ 569              	.LVL59:
+ 125:Src/vesc.c    **** 		permille = 1000;
+ARM GAS  /tmp/ccE0vHya.s 			page 21
+
+
+ 570              		.loc 1 125 0
+ 571 000e B4F57A7F 		cmp	r4, #1000
+ 572 0012 01DD     		ble	.L40
+ 126:Src/vesc.c    **** 	uint8_t* toWrite = payload;
+ 573              		.loc 1 126 0
+ 574 0014 4FF47A74 		mov	r4, #1000
+ 575              	.LVL60:
+ 576              	.L40:
+ 127:Src/vesc.c    **** 	push(&toWrite, 1, VESC_COMMAND_SET_DUTY);
+ 577              		.loc 1 127 0
+ 578 0018 0C4E     		ldr	r6, .L44+4
+ 579 001a 02AD     		add	r5, sp, #8
+ 580 001c 45F8046D 		str	r6, [r5, #-4]!
+ 128:Src/vesc.c    **** 	push(&toWrite, 4, permille * 100); //*100 vesc protocol
+ 581              		.loc 1 128 0
+ 582 0020 2846     		mov	r0, r5
+ 583 0022 0121     		movs	r1, #1
+ 584 0024 0522     		movs	r2, #5
+ 585 0026 FFF7FEFF 		bl	push
+ 586              	.LVL61:
+ 129:Src/vesc.c    **** 	return sendPayload(toWrite - payload);
+ 587              		.loc 1 129 0
+ 588 002a 2846     		mov	r0, r5
+ 589 002c 0421     		movs	r1, #4
+ 590 002e 6422     		movs	r2, #100
+ 591 0030 02FB04F2 		mul	r2, r2, r4
+ 592 0034 FFF7FEFF 		bl	push
+ 593              	.LVL62:
+ 130:Src/vesc.c    **** }
+ 594              		.loc 1 130 0
+ 595 0038 0198     		ldr	r0, [sp, #4]
+ 596 003a 801B     		subs	r0, r0, r6
+ 597 003c C0B2     		uxtb	r0, r0
+ 598 003e FFF7FEFF 		bl	sendPayload
+ 599              	.LVL63:
+ 131:Src/vesc.c    **** 
+ 600              		.loc 1 131 0
+ 601 0042 02B0     		add	sp, sp, #8
+ 602              	.LCFI15:
+ 603              		.cfi_def_cfa_offset 16
+ 604              		@ sp needed
+ 605 0044 70BD     		pop	{r4, r5, r6, pc}
+ 606              	.LVL64:
+ 607              	.L45:
+ 608 0046 00BF     		.align	2
+ 609              	.L44:
+ 610 0048 18FCFFFF 		.word	-1000
+ 611 004c 00000000 		.word	.LANCHOR3
+ 612              		.cfi_endproc
+ 613              	.LFE69:
+ 615              		.section	.text.vescSetCurrent,"ax",%progbits
+ 616              		.align	2
+ 617              		.global	vescSetCurrent
+ 618              		.thumb
+ 619              		.thumb_func
+ 621              	vescSetCurrent:
+ 622              	.LFB70:
+ARM GAS  /tmp/ccE0vHya.s 			page 22
+
+
+ 134:Src/vesc.c    **** 	uint8_t* toWrite = payload;
+ 623              		.loc 1 134 0
+ 624              		.cfi_startproc
+ 625              		@ args = 0, pretend = 0, frame = 8
+ 626              		@ frame_needed = 0, uses_anonymous_args = 0
+ 627              	.LVL65:
+ 628 0000 70B5     		push	{r4, r5, r6, lr}
+ 629              	.LCFI16:
+ 630              		.cfi_def_cfa_offset 16
+ 631              		.cfi_offset 4, -16
+ 632              		.cfi_offset 5, -12
+ 633              		.cfi_offset 6, -8
+ 634              		.cfi_offset 14, -4
+ 635 0002 82B0     		sub	sp, sp, #8
+ 636              	.LCFI17:
+ 637              		.cfi_def_cfa_offset 24
+ 638 0004 0646     		mov	r6, r0
+ 135:Src/vesc.c    **** 	push(&toWrite, 1, VESC_COMMAND_SET_CURRENT);
+ 639              		.loc 1 135 0
+ 640 0006 0A4D     		ldr	r5, .L48
+ 641 0008 02AC     		add	r4, sp, #8
+ 642 000a 44F8045D 		str	r5, [r4, #-4]!
+ 136:Src/vesc.c    **** 	push(&toWrite, 4, mA);
+ 643              		.loc 1 136 0
+ 644 000e 2046     		mov	r0, r4
+ 645              	.LVL66:
+ 646 0010 0121     		movs	r1, #1
+ 647 0012 0622     		movs	r2, #6
+ 648 0014 FFF7FEFF 		bl	push
+ 649              	.LVL67:
+ 137:Src/vesc.c    **** 	return sendPayload(toWrite - payload);
+ 650              		.loc 1 137 0
+ 651 0018 2046     		mov	r0, r4
+ 652 001a 0421     		movs	r1, #4
+ 653 001c 3246     		mov	r2, r6
+ 654 001e FFF7FEFF 		bl	push
+ 655              	.LVL68:
+ 138:Src/vesc.c    **** }
+ 656              		.loc 1 138 0
+ 657 0022 0198     		ldr	r0, [sp, #4]
+ 658 0024 401B     		subs	r0, r0, r5
+ 659 0026 C0B2     		uxtb	r0, r0
+ 660 0028 FFF7FEFF 		bl	sendPayload
+ 661              	.LVL69:
+ 139:Src/vesc.c    **** 
+ 662              		.loc 1 139 0
+ 663 002c 02B0     		add	sp, sp, #8
+ 664              	.LCFI18:
+ 665              		.cfi_def_cfa_offset 16
+ 666              		@ sp needed
+ 667 002e 70BD     		pop	{r4, r5, r6, pc}
+ 668              	.LVL70:
+ 669              	.L49:
+ 670              		.align	2
+ 671              	.L48:
+ 672 0030 00000000 		.word	.LANCHOR3
+ 673              		.cfi_endproc
+ARM GAS  /tmp/ccE0vHya.s 			page 23
+
+
+ 674              	.LFE70:
+ 676              		.section	.text.vescSetERPM,"ax",%progbits
+ 677              		.align	2
+ 678              		.global	vescSetERPM
+ 679              		.thumb
+ 680              		.thumb_func
+ 682              	vescSetERPM:
+ 683              	.LFB71:
+ 142:Src/vesc.c    **** 	uint8_t* toWrite = payload;
+ 684              		.loc 1 142 0
+ 685              		.cfi_startproc
+ 686              		@ args = 0, pretend = 0, frame = 8
+ 687              		@ frame_needed = 0, uses_anonymous_args = 0
+ 688              	.LVL71:
+ 689 0000 70B5     		push	{r4, r5, r6, lr}
+ 690              	.LCFI19:
+ 691              		.cfi_def_cfa_offset 16
+ 692              		.cfi_offset 4, -16
+ 693              		.cfi_offset 5, -12
+ 694              		.cfi_offset 6, -8
+ 695              		.cfi_offset 14, -4
+ 696 0002 82B0     		sub	sp, sp, #8
+ 697              	.LCFI20:
+ 698              		.cfi_def_cfa_offset 24
+ 699 0004 0646     		mov	r6, r0
+ 143:Src/vesc.c    **** 	push(&toWrite, 1, VESC_COMMAND_SET_RPM);
+ 700              		.loc 1 143 0
+ 701 0006 0A4D     		ldr	r5, .L52
+ 702 0008 02AC     		add	r4, sp, #8
+ 703 000a 44F8045D 		str	r5, [r4, #-4]!
+ 144:Src/vesc.c    **** 	push(&toWrite, 4, erpm);
+ 704              		.loc 1 144 0
+ 705 000e 2046     		mov	r0, r4
+ 706              	.LVL72:
+ 707 0010 0121     		movs	r1, #1
+ 708 0012 0822     		movs	r2, #8
+ 709 0014 FFF7FEFF 		bl	push
+ 710              	.LVL73:
+ 145:Src/vesc.c    **** 	return sendPayload(toWrite - payload);
+ 711              		.loc 1 145 0
+ 712 0018 2046     		mov	r0, r4
+ 713 001a 0421     		movs	r1, #4
+ 714 001c 3246     		mov	r2, r6
+ 715 001e FFF7FEFF 		bl	push
+ 716              	.LVL74:
+ 146:Src/vesc.c    **** }
+ 717              		.loc 1 146 0
+ 718 0022 0198     		ldr	r0, [sp, #4]
+ 719 0024 401B     		subs	r0, r0, r5
+ 720 0026 C0B2     		uxtb	r0, r0
+ 721 0028 FFF7FEFF 		bl	sendPayload
+ 722              	.LVL75:
+ 147:Src/vesc.c    **** 
+ 723              		.loc 1 147 0
+ 724 002c 02B0     		add	sp, sp, #8
+ 725              	.LCFI21:
+ 726              		.cfi_def_cfa_offset 16
+ARM GAS  /tmp/ccE0vHya.s 			page 24
+
+
+ 727              		@ sp needed
+ 728 002e 70BD     		pop	{r4, r5, r6, pc}
+ 729              	.LVL76:
+ 730              	.L53:
+ 731              		.align	2
+ 732              	.L52:
+ 733 0030 00000000 		.word	.LANCHOR3
+ 734              		.cfi_endproc
+ 735              	.LFE71:
+ 737              		.section	.text.vescNextByte,"ax",%progbits
+ 738              		.align	2
+ 739              		.global	vescNextByte
+ 740              		.thumb
+ 741              		.thumb_func
+ 743              	vescNextByte:
+ 744              	.LFB73:
+ 174:Src/vesc.c    **** 
+ 175:Src/vesc.c    **** void vescNextByte(uint8_t byte)
+ 176:Src/vesc.c    **** {
+ 745              		.loc 1 176 0
+ 746              		.cfi_startproc
+ 747              		@ args = 0, pretend = 0, frame = 0
+ 748              		@ frame_needed = 0, uses_anonymous_args = 0
+ 749              	.LVL77:
+ 750 0000 10B5     		push	{r4, lr}
+ 751              	.LCFI22:
+ 752              		.cfi_def_cfa_offset 8
+ 753              		.cfi_offset 4, -8
+ 754              		.cfi_offset 14, -4
+ 177:Src/vesc.c    **** 	static uint8_t incSize = 0;
+ 178:Src/vesc.c    **** 	static uint8_t state = 0;
+ 179:Src/vesc.c    **** 	static uint8_t idx = 0;
+ 180:Src/vesc.c    **** 	static uint16_t crc = 0;
+ 181:Src/vesc.c    **** 	if (state == 0) {
+ 755              		.loc 1 181 0
+ 756 0002 254B     		ldr	r3, .L63
+ 757 0004 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 758 0006 2BB9     		cbnz	r3, .L55
+ 182:Src/vesc.c    **** 		if (byte == 2)
+ 759              		.loc 1 182 0
+ 760 0008 0228     		cmp	r0, #2
+ 761 000a 44D1     		bne	.L54
+ 183:Src/vesc.c    **** 			++state;
+ 762              		.loc 1 183 0
+ 763 000c 0133     		adds	r3, r3, #1
+ 764 000e 224A     		ldr	r2, .L63
+ 765 0010 1370     		strb	r3, [r2]
+ 766 0012 10BD     		pop	{r4, pc}
+ 767              	.L55:
+ 184:Src/vesc.c    **** 	} else if (state == 1) {
+ 768              		.loc 1 184 0
+ 769 0014 012B     		cmp	r3, #1
+ 770 0016 08D1     		bne	.L57
+ 185:Src/vesc.c    **** 		idx = 0;
+ 771              		.loc 1 185 0
+ 772 0018 0021     		movs	r1, #0
+ 773 001a 204A     		ldr	r2, .L63+4
+ARM GAS  /tmp/ccE0vHya.s 			page 25
+
+
+ 774 001c 1170     		strb	r1, [r2]
+ 186:Src/vesc.c    **** 		incSize = byte;
+ 775              		.loc 1 186 0
+ 776 001e 204A     		ldr	r2, .L63+8
+ 777 0020 1070     		strb	r0, [r2]
+ 187:Src/vesc.c    **** 		++state;
+ 778              		.loc 1 187 0
+ 779 0022 0133     		adds	r3, r3, #1
+ 780 0024 1C4A     		ldr	r2, .L63
+ 781 0026 1370     		strb	r3, [r2]
+ 782 0028 10BD     		pop	{r4, pc}
+ 783              	.L57:
+ 188:Src/vesc.c    **** 	} else if (state == 2) {
+ 784              		.loc 1 188 0
+ 785 002a 022B     		cmp	r3, #2
+ 786 002c 0ED1     		bne	.L58
+ 189:Src/vesc.c    **** 		incData[idx] = byte;
+ 787              		.loc 1 189 0
+ 788 002e 1B49     		ldr	r1, .L63+4
+ 789 0030 0A78     		ldrb	r2, [r1]	@ zero_extendqisi2
+ 790 0032 1C4C     		ldr	r4, .L63+12
+ 791 0034 A054     		strb	r0, [r4, r2]
+ 190:Src/vesc.c    **** 		if (++idx == incSize)
+ 792              		.loc 1 190 0
+ 793 0036 0132     		adds	r2, r2, #1
+ 794 0038 D2B2     		uxtb	r2, r2
+ 795 003a 0A70     		strb	r2, [r1]
+ 796 003c 1849     		ldr	r1, .L63+8
+ 797 003e 0978     		ldrb	r1, [r1]	@ zero_extendqisi2
+ 798 0040 8A42     		cmp	r2, r1
+ 799 0042 28D1     		bne	.L54
+ 191:Src/vesc.c    **** 			++state;
+ 800              		.loc 1 191 0
+ 801 0044 0133     		adds	r3, r3, #1
+ 802 0046 144A     		ldr	r2, .L63
+ 803 0048 1370     		strb	r3, [r2]
+ 804 004a 10BD     		pop	{r4, pc}
+ 805              	.L58:
+ 192:Src/vesc.c    **** 	} else if (state == 3) {
+ 806              		.loc 1 192 0
+ 807 004c 032B     		cmp	r3, #3
+ 808 004e 06D1     		bne	.L59
+ 193:Src/vesc.c    **** 		crc = byte << 8;
+ 809              		.loc 1 193 0
+ 810 0050 0002     		lsls	r0, r0, #8
+ 811              	.LVL78:
+ 812 0052 154A     		ldr	r2, .L63+16
+ 813 0054 1080     		strh	r0, [r2]	@ movhi
+ 194:Src/vesc.c    **** 		++state;
+ 814              		.loc 1 194 0
+ 815 0056 0133     		adds	r3, r3, #1
+ 816 0058 0F4A     		ldr	r2, .L63
+ 817 005a 1370     		strb	r3, [r2]
+ 818 005c 10BD     		pop	{r4, pc}
+ 819              	.LVL79:
+ 820              	.L59:
+ 195:Src/vesc.c    **** 	} else if (state == 4) {
+ARM GAS  /tmp/ccE0vHya.s 			page 26
+
+
+ 821              		.loc 1 195 0
+ 822 005e 042B     		cmp	r3, #4
+ 823 0060 07D1     		bne	.L60
+ 196:Src/vesc.c    **** 		crc |= byte;
+ 824              		.loc 1 196 0
+ 825 0062 1149     		ldr	r1, .L63+16
+ 826 0064 0A88     		ldrh	r2, [r1]
+ 827 0066 1043     		orrs	r0, r0, r2
+ 828              	.LVL80:
+ 829 0068 0880     		strh	r0, [r1]	@ movhi
+ 197:Src/vesc.c    **** 		++state;
+ 830              		.loc 1 197 0
+ 831 006a 0133     		adds	r3, r3, #1
+ 832 006c 0A4A     		ldr	r2, .L63
+ 833 006e 1370     		strb	r3, [r2]
+ 834 0070 10BD     		pop	{r4, pc}
+ 835              	.LVL81:
+ 836              	.L60:
+ 198:Src/vesc.c    **** 	} else if (state == 5) {
+ 837              		.loc 1 198 0
+ 838 0072 052B     		cmp	r3, #5
+ 839 0074 0FD1     		bne	.L54
+ 199:Src/vesc.c    **** 		if (byte == 3 && crc16(incData, incSize) == crc)
+ 840              		.loc 1 199 0
+ 841 0076 0328     		cmp	r0, #3
+ 842 0078 0AD1     		bne	.L61
+ 843              		.loc 1 199 0 is_stmt 0 discriminator 1
+ 844 007a 0A48     		ldr	r0, .L63+12
+ 845              	.LVL82:
+ 846 007c 084B     		ldr	r3, .L63+8
+ 847 007e 1978     		ldrb	r1, [r3]	@ zero_extendqisi2
+ 848 0080 FFF7FEFF 		bl	crc16
+ 849              	.LVL83:
+ 850 0084 084B     		ldr	r3, .L63+16
+ 851 0086 1B88     		ldrh	r3, [r3]
+ 852 0088 9842     		cmp	r0, r3
+ 853 008a 01D1     		bne	.L61
+ 200:Src/vesc.c    **** 			processData();
+ 854              		.loc 1 200 0 is_stmt 1
+ 855 008c FFF7FEFF 		bl	processData
+ 856              	.LVL84:
+ 857              	.L61:
+ 201:Src/vesc.c    **** 		state = 0;
+ 858              		.loc 1 201 0
+ 859 0090 0022     		movs	r2, #0
+ 860 0092 014B     		ldr	r3, .L63
+ 861 0094 1A70     		strb	r2, [r3]
+ 862              	.L54:
+ 863 0096 10BD     		pop	{r4, pc}
+ 864              	.L64:
+ 865              		.align	2
+ 866              	.L63:
+ 867 0098 00000000 		.word	.LANCHOR5
+ 868 009c 00000000 		.word	.LANCHOR6
+ 869 00a0 00000000 		.word	.LANCHOR7
+ 870 00a4 00000000 		.word	.LANCHOR1
+ 871 00a8 00000000 		.word	.LANCHOR8
+ARM GAS  /tmp/ccE0vHya.s 			page 27
+
+
+ 872              		.cfi_endproc
+ 873              	.LFE73:
+ 875              		.section	.text.HAL_UART_RxCpltCallback,"ax",%progbits
+ 876              		.align	2
+ 877              		.global	HAL_UART_RxCpltCallback
+ 878              		.thumb
+ 879              		.thumb_func
+ 881              	HAL_UART_RxCpltCallback:
+ 882              	.LFB74:
+ 202:Src/vesc.c    **** 	}
+ 203:Src/vesc.c    **** }
+ 204:Src/vesc.c    **** 
+ 205:Src/vesc.c    **** void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart)
+ 206:Src/vesc.c    **** {
+ 883              		.loc 1 206 0
+ 884              		.cfi_startproc
+ 885              		@ args = 0, pretend = 0, frame = 0
+ 886              		@ frame_needed = 0, uses_anonymous_args = 0
+ 887              	.LVL85:
+ 888 0000 10B5     		push	{r4, lr}
+ 889              	.LCFI23:
+ 890              		.cfi_def_cfa_offset 8
+ 891              		.cfi_offset 4, -8
+ 892              		.cfi_offset 14, -4
+ 207:Src/vesc.c    **** 	if (huart != uart4Handle) //here we have only UART4
+ 893              		.loc 1 207 0
+ 894 0002 094B     		ldr	r3, .L68
+ 895 0004 1B68     		ldr	r3, [r3]
+ 896 0006 8342     		cmp	r3, r0
+ 897 0008 03D0     		beq	.L66
+ 208:Src/vesc.c    **** 		_Error_Handler(__FILE__, __LINE__);
+ 898              		.loc 1 208 0
+ 899 000a 0848     		ldr	r0, .L68+4
+ 900              	.LVL86:
+ 901 000c D021     		movs	r1, #208
+ 902 000e FFF7FEFF 		bl	_Error_Handler
+ 903              	.LVL87:
+ 904              	.L66:
+ 209:Src/vesc.c    **** 	vescNextByte(uartBuffer);
+ 905              		.loc 1 209 0
+ 906 0012 074C     		ldr	r4, .L68+8
+ 907 0014 2078     		ldrb	r0, [r4]	@ zero_extendqisi2
+ 908 0016 FFF7FEFF 		bl	vescNextByte
+ 909              	.LVL88:
+ 210:Src/vesc.c    **** 	HAL_UART_Receive_IT(uart4Handle, &uartBuffer, 1);
+ 910              		.loc 1 210 0
+ 911 001a 034B     		ldr	r3, .L68
+ 912 001c 1868     		ldr	r0, [r3]
+ 913 001e 2146     		mov	r1, r4
+ 914 0020 0122     		movs	r2, #1
+ 915 0022 FFF7FEFF 		bl	HAL_UART_Receive_IT
+ 916              	.LVL89:
+ 917 0026 10BD     		pop	{r4, pc}
+ 918              	.L69:
+ 919              		.align	2
+ 920              	.L68:
+ 921 0028 00000000 		.word	uart4Handle
+ARM GAS  /tmp/ccE0vHya.s 			page 28
+
+
+ 922 002c 00000000 		.word	.LC0
+ 923 0030 00000000 		.word	.LANCHOR4
+ 924              		.cfi_endproc
+ 925              	.LFE74:
+ 927              		.comm	vescLastValues,64,4
+ 928              		.comm	vescNewValuesReady,1,1
+ 929              		.section	.bss.incSize.6833,"aw",%nobits
+ 930              		.set	.LANCHOR7,. + 0
+ 933              	incSize.6833:
+ 934 0000 00       		.space	1
+ 935              		.section	.bss.incData,"aw",%nobits
+ 936              		.align	2
+ 937              		.set	.LANCHOR1,. + 0
+ 940              	incData:
+ 941 0000 00000000 		.space	128
+ 941      00000000 
+ 941      00000000 
+ 941      00000000 
+ 941      00000000 
+ 942              		.section	.bss.crc.6836,"aw",%nobits
+ 943              		.align	1
+ 944              		.set	.LANCHOR8,. + 0
+ 947              	crc.6836:
+ 948 0000 0000     		.space	2
+ 949              		.section	.bss.uartBuffer,"aw",%nobits
+ 950              		.set	.LANCHOR4,. + 0
+ 953              	uartBuffer:
+ 954 0000 00       		.space	1
+ 955              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 956              		.align	2
+ 957              	.LC0:
+ 958 0000 5372632F 		.ascii	"Src/vesc.c\000"
+ 958      76657363 
+ 958      2E6300
+ 959              		.section	.bss.state.6834,"aw",%nobits
+ 960              		.set	.LANCHOR5,. + 0
+ 963              	state.6834:
+ 964 0000 00       		.space	1
+ 965              		.section	.bss.idx.6835,"aw",%nobits
+ 966              		.set	.LANCHOR6,. + 0
+ 969              	idx.6835:
+ 970 0000 00       		.space	1
+ 971              		.section	.bss.sendBuf,"aw",%nobits
+ 972              		.align	2
+ 973              		.set	.LANCHOR2,. + 0
+ 976              	sendBuf:
+ 977 0000 00000000 		.space	64
+ 977      00000000 
+ 977      00000000 
+ 977      00000000 
+ 977      00000000 
+ 978              		.section	.bss.payload,"aw",%nobits
+ 979              		.align	2
+ 980              		.set	.LANCHOR3,. + 0
+ 983              	payload:
+ 984 0000 00000000 		.space	32
+ 984      00000000 
+ARM GAS  /tmp/ccE0vHya.s 			page 29
+
+
+ 984      00000000 
+ 984      00000000 
+ 984      00000000 
+ 985              		.section	.rodata.crc16Tab,"a",%progbits
+ 986              		.align	2
+ 987              		.set	.LANCHOR0,. + 0
+ 990              	crc16Tab:
+ 991 0000 0000     		.short	0
+ 992 0002 2110     		.short	4129
+ 993 0004 4220     		.short	8258
+ 994 0006 6330     		.short	12387
+ 995 0008 8440     		.short	16516
+ 996 000a A550     		.short	20645
+ 997 000c C660     		.short	24774
+ 998 000e E770     		.short	28903
+ 999 0010 0881     		.short	-32504
+ 1000 0012 2991     		.short	-28375
+ 1001 0014 4AA1     		.short	-24246
+ 1002 0016 6BB1     		.short	-20117
+ 1003 0018 8CC1     		.short	-15988
+ 1004 001a ADD1     		.short	-11859
+ 1005 001c CEE1     		.short	-7730
+ 1006 001e EFF1     		.short	-3601
+ 1007 0020 3112     		.short	4657
+ 1008 0022 1002     		.short	528
+ 1009 0024 7332     		.short	12915
+ 1010 0026 5222     		.short	8786
+ 1011 0028 B552     		.short	21173
+ 1012 002a 9442     		.short	17044
+ 1013 002c F772     		.short	29431
+ 1014 002e D662     		.short	25302
+ 1015 0030 3993     		.short	-27847
+ 1016 0032 1883     		.short	-31976
+ 1017 0034 7BB3     		.short	-19589
+ 1018 0036 5AA3     		.short	-23718
+ 1019 0038 BDD3     		.short	-11331
+ 1020 003a 9CC3     		.short	-15460
+ 1021 003c FFF3     		.short	-3073
+ 1022 003e DEE3     		.short	-7202
+ 1023 0040 6224     		.short	9314
+ 1024 0042 4334     		.short	13379
+ 1025 0044 2004     		.short	1056
+ 1026 0046 0114     		.short	5121
+ 1027 0048 E664     		.short	25830
+ 1028 004a C774     		.short	29895
+ 1029 004c A444     		.short	17572
+ 1030 004e 8554     		.short	21637
+ 1031 0050 6AA5     		.short	-23190
+ 1032 0052 4BB5     		.short	-19125
+ 1033 0054 2885     		.short	-31448
+ 1034 0056 0995     		.short	-27383
+ 1035 0058 EEE5     		.short	-6674
+ 1036 005a CFF5     		.short	-2609
+ 1037 005c ACC5     		.short	-14932
+ 1038 005e 8DD5     		.short	-10867
+ 1039 0060 5336     		.short	13907
+ 1040 0062 7226     		.short	9842
+ARM GAS  /tmp/ccE0vHya.s 			page 30
+
+
+ 1041 0064 1116     		.short	5649
+ 1042 0066 3006     		.short	1584
+ 1043 0068 D776     		.short	30423
+ 1044 006a F666     		.short	26358
+ 1045 006c 9556     		.short	22165
+ 1046 006e B446     		.short	18100
+ 1047 0070 5BB7     		.short	-18597
+ 1048 0072 7AA7     		.short	-22662
+ 1049 0074 1997     		.short	-26855
+ 1050 0076 3887     		.short	-30920
+ 1051 0078 DFF7     		.short	-2081
+ 1052 007a FEE7     		.short	-6146
+ 1053 007c 9DD7     		.short	-10339
+ 1054 007e BCC7     		.short	-14404
+ 1055 0080 C448     		.short	18628
+ 1056 0082 E558     		.short	22757
+ 1057 0084 8668     		.short	26758
+ 1058 0086 A778     		.short	30887
+ 1059 0088 4008     		.short	2112
+ 1060 008a 6118     		.short	6241
+ 1061 008c 0228     		.short	10242
+ 1062 008e 2338     		.short	14371
+ 1063 0090 CCC9     		.short	-13876
+ 1064 0092 EDD9     		.short	-9747
+ 1065 0094 8EE9     		.short	-5746
+ 1066 0096 AFF9     		.short	-1617
+ 1067 0098 4889     		.short	-30392
+ 1068 009a 6999     		.short	-26263
+ 1069 009c 0AA9     		.short	-22262
+ 1070 009e 2BB9     		.short	-18133
+ 1071 00a0 F55A     		.short	23285
+ 1072 00a2 D44A     		.short	19156
+ 1073 00a4 B77A     		.short	31415
+ 1074 00a6 966A     		.short	27286
+ 1075 00a8 711A     		.short	6769
+ 1076 00aa 500A     		.short	2640
+ 1077 00ac 333A     		.short	14899
+ 1078 00ae 122A     		.short	10770
+ 1079 00b0 FDDB     		.short	-9219
+ 1080 00b2 DCCB     		.short	-13348
+ 1081 00b4 BFFB     		.short	-1089
+ 1082 00b6 9EEB     		.short	-5218
+ 1083 00b8 799B     		.short	-25735
+ 1084 00ba 588B     		.short	-29864
+ 1085 00bc 3BBB     		.short	-17605
+ 1086 00be 1AAB     		.short	-21734
+ 1087 00c0 A66C     		.short	27814
+ 1088 00c2 877C     		.short	31879
+ 1089 00c4 E44C     		.short	19684
+ 1090 00c6 C55C     		.short	23749
+ 1091 00c8 222C     		.short	11298
+ 1092 00ca 033C     		.short	15363
+ 1093 00cc 600C     		.short	3168
+ 1094 00ce 411C     		.short	7233
+ 1095 00d0 AEED     		.short	-4690
+ 1096 00d2 8FFD     		.short	-625
+ 1097 00d4 ECCD     		.short	-12820
+ARM GAS  /tmp/ccE0vHya.s 			page 31
+
+
+ 1098 00d6 CDDD     		.short	-8755
+ 1099 00d8 2AAD     		.short	-21206
+ 1100 00da 0BBD     		.short	-17141
+ 1101 00dc 688D     		.short	-29336
+ 1102 00de 499D     		.short	-25271
+ 1103 00e0 977E     		.short	32407
+ 1104 00e2 B66E     		.short	28342
+ 1105 00e4 D55E     		.short	24277
+ 1106 00e6 F44E     		.short	20212
+ 1107 00e8 133E     		.short	15891
+ 1108 00ea 322E     		.short	11826
+ 1109 00ec 511E     		.short	7761
+ 1110 00ee 700E     		.short	3696
+ 1111 00f0 9FFF     		.short	-97
+ 1112 00f2 BEEF     		.short	-4162
+ 1113 00f4 DDDF     		.short	-8227
+ 1114 00f6 FCCF     		.short	-12292
+ 1115 00f8 1BBF     		.short	-16613
+ 1116 00fa 3AAF     		.short	-20678
+ 1117 00fc 599F     		.short	-24743
+ 1118 00fe 788F     		.short	-28808
+ 1119 0100 8891     		.short	-28280
+ 1120 0102 A981     		.short	-32343
+ 1121 0104 CAB1     		.short	-20022
+ 1122 0106 EBA1     		.short	-24085
+ 1123 0108 0CD1     		.short	-12020
+ 1124 010a 2DC1     		.short	-16083
+ 1125 010c 4EF1     		.short	-3762
+ 1126 010e 6FE1     		.short	-7825
+ 1127 0110 8010     		.short	4224
+ 1128 0112 A100     		.short	161
+ 1129 0114 C230     		.short	12482
+ 1130 0116 E320     		.short	8419
+ 1131 0118 0450     		.short	20484
+ 1132 011a 2540     		.short	16421
+ 1133 011c 4670     		.short	28742
+ 1134 011e 6760     		.short	24679
+ 1135 0120 B983     		.short	-31815
+ 1136 0122 9893     		.short	-27752
+ 1137 0124 FBA3     		.short	-23557
+ 1138 0126 DAB3     		.short	-19494
+ 1139 0128 3DC3     		.short	-15555
+ 1140 012a 1CD3     		.short	-11492
+ 1141 012c 7FE3     		.short	-7297
+ 1142 012e 5EF3     		.short	-3234
+ 1143 0130 B102     		.short	689
+ 1144 0132 9012     		.short	4752
+ 1145 0134 F322     		.short	8947
+ 1146 0136 D232     		.short	13010
+ 1147 0138 3542     		.short	16949
+ 1148 013a 1452     		.short	21012
+ 1149 013c 7762     		.short	25207
+ 1150 013e 5672     		.short	29270
+ 1151 0140 EAB5     		.short	-18966
+ 1152 0142 CBA5     		.short	-23093
+ 1153 0144 A895     		.short	-27224
+ 1154 0146 8985     		.short	-31351
+ARM GAS  /tmp/ccE0vHya.s 			page 32
+
+
+ 1155 0148 6EF5     		.short	-2706
+ 1156 014a 4FE5     		.short	-6833
+ 1157 014c 2CD5     		.short	-10964
+ 1158 014e 0DC5     		.short	-15091
+ 1159 0150 E234     		.short	13538
+ 1160 0152 C324     		.short	9411
+ 1161 0154 A014     		.short	5280
+ 1162 0156 8104     		.short	1153
+ 1163 0158 6674     		.short	29798
+ 1164 015a 4764     		.short	25671
+ 1165 015c 2454     		.short	21540
+ 1166 015e 0544     		.short	17413
+ 1167 0160 DBA7     		.short	-22565
+ 1168 0162 FAB7     		.short	-18438
+ 1169 0164 9987     		.short	-30823
+ 1170 0166 B897     		.short	-26696
+ 1171 0168 5FE7     		.short	-6305
+ 1172 016a 7EF7     		.short	-2178
+ 1173 016c 1DC7     		.short	-14563
+ 1174 016e 3CD7     		.short	-10436
+ 1175 0170 D326     		.short	9939
+ 1176 0172 F236     		.short	14066
+ 1177 0174 9106     		.short	1681
+ 1178 0176 B016     		.short	5808
+ 1179 0178 5766     		.short	26199
+ 1180 017a 7676     		.short	30326
+ 1181 017c 1546     		.short	17941
+ 1182 017e 3456     		.short	22068
+ 1183 0180 4CD9     		.short	-9908
+ 1184 0182 6DC9     		.short	-13971
+ 1185 0184 0EF9     		.short	-1778
+ 1186 0186 2FE9     		.short	-5841
+ 1187 0188 C899     		.short	-26168
+ 1188 018a E989     		.short	-30231
+ 1189 018c 8AB9     		.short	-18038
+ 1190 018e ABA9     		.short	-22101
+ 1191 0190 4458     		.short	22596
+ 1192 0192 6548     		.short	18533
+ 1193 0194 0678     		.short	30726
+ 1194 0196 2768     		.short	26663
+ 1195 0198 C018     		.short	6336
+ 1196 019a E108     		.short	2273
+ 1197 019c 8238     		.short	14466
+ 1198 019e A328     		.short	10403
+ 1199 01a0 7DCB     		.short	-13443
+ 1200 01a2 5CDB     		.short	-9380
+ 1201 01a4 3FEB     		.short	-5313
+ 1202 01a6 1EFB     		.short	-1250
+ 1203 01a8 F98B     		.short	-29703
+ 1204 01aa D89B     		.short	-25640
+ 1205 01ac BBAB     		.short	-21573
+ 1206 01ae 9ABB     		.short	-17510
+ 1207 01b0 754A     		.short	19061
+ 1208 01b2 545A     		.short	23124
+ 1209 01b4 376A     		.short	27191
+ 1210 01b6 167A     		.short	31254
+ 1211 01b8 F10A     		.short	2801
+ARM GAS  /tmp/ccE0vHya.s 			page 33
+
+
+ 1212 01ba D01A     		.short	6864
+ 1213 01bc B32A     		.short	10931
+ 1214 01be 923A     		.short	14994
+ 1215 01c0 2EFD     		.short	-722
+ 1216 01c2 0FED     		.short	-4849
+ 1217 01c4 6CDD     		.short	-8852
+ 1218 01c6 4DCD     		.short	-12979
+ 1219 01c8 AABD     		.short	-16982
+ 1220 01ca 8BAD     		.short	-21109
+ 1221 01cc E89D     		.short	-25112
+ 1222 01ce C98D     		.short	-29239
+ 1223 01d0 267C     		.short	31782
+ 1224 01d2 076C     		.short	27655
+ 1225 01d4 645C     		.short	23652
+ 1226 01d6 454C     		.short	19525
+ 1227 01d8 A23C     		.short	15522
+ 1228 01da 832C     		.short	11395
+ 1229 01dc E01C     		.short	7392
+ 1230 01de C10C     		.short	3265
+ 1231 01e0 1FEF     		.short	-4321
+ 1232 01e2 3EFF     		.short	-194
+ 1233 01e4 5DCF     		.short	-12451
+ 1234 01e6 7CDF     		.short	-8324
+ 1235 01e8 9BAF     		.short	-20581
+ 1236 01ea BABF     		.short	-16454
+ 1237 01ec D98F     		.short	-28711
+ 1238 01ee F89F     		.short	-24584
+ 1239 01f0 176E     		.short	28183
+ 1240 01f2 367E     		.short	32310
+ 1241 01f4 554E     		.short	20053
+ 1242 01f6 745E     		.short	24180
+ 1243 01f8 932E     		.short	11923
+ 1244 01fa B23E     		.short	16050
+ 1245 01fc D10E     		.short	3793
+ 1246 01fe F01E     		.short	7920
+ 1247              		.text
+ 1248              	.Letext0:
+ 1249              		.file 3 "/usr/include/newlib/machine/_default_types.h"
+ 1250              		.file 4 "/usr/include/newlib/sys/_stdint.h"
+ 1251              		.file 5 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 1252              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 1253              		.file 7 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 1254              		.file 8 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h"
+ 1255              		.file 9 "Inc/vesc.h"
+ 1256              		.file 10 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 1257              		.file 11 "Inc/handles.h"
+ 1258              		.file 12 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h"
+ 1259              		.file 13 "Inc/main.h"
+ARM GAS  /tmp/ccE0vHya.s 			page 34
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 vesc.c
+     /tmp/ccE0vHya.s:19     .text.crc16:0000000000000000 $t
+     /tmp/ccE0vHya.s:23     .text.crc16:0000000000000000 crc16
+     /tmp/ccE0vHya.s:75     .text.crc16:000000000000002c $d
+     /tmp/ccE0vHya.s:80     .text.extract:0000000000000000 $t
+     /tmp/ccE0vHya.s:84     .text.extract:0000000000000000 extract
+     /tmp/ccE0vHya.s:138    .text.push:0000000000000000 $t
+     /tmp/ccE0vHya.s:142    .text.push:0000000000000000 push
+     /tmp/ccE0vHya.s:194    .text.processData:0000000000000000 $t
+     /tmp/ccE0vHya.s:198    .text.processData:0000000000000000 processData
+     /tmp/ccE0vHya.s:347    .text.processData:00000000000000c8 $d
+                            *COM*:0000000000000040 vescLastValues
+                            *COM*:0000000000000001 vescNewValuesReady
+     /tmp/ccE0vHya.s:355    .text.sendPayload:0000000000000000 $t
+     /tmp/ccE0vHya.s:359    .text.sendPayload:0000000000000000 sendPayload
+     /tmp/ccE0vHya.s:461    .text.sendPayload:0000000000000054 $d
+     /tmp/ccE0vHya.s:468    .text.vescInit:0000000000000000 $t
+     /tmp/ccE0vHya.s:473    .text.vescInit:0000000000000000 vescInit
+     /tmp/ccE0vHya.s:495    .text.vescInit:0000000000000010 $d
+     /tmp/ccE0vHya.s:501    .text.vescRequestValues:0000000000000000 $t
+     /tmp/ccE0vHya.s:506    .text.vescRequestValues:0000000000000000 vescRequestValues
+     /tmp/ccE0vHya.s:534    .text.vescRequestValues:0000000000000018 $d
+     /tmp/ccE0vHya.s:540    .text.vescSetPwm:0000000000000000 $t
+     /tmp/ccE0vHya.s:545    .text.vescSetPwm:0000000000000000 vescSetPwm
+     /tmp/ccE0vHya.s:610    .text.vescSetPwm:0000000000000048 $d
+     /tmp/ccE0vHya.s:616    .text.vescSetCurrent:0000000000000000 $t
+     /tmp/ccE0vHya.s:621    .text.vescSetCurrent:0000000000000000 vescSetCurrent
+     /tmp/ccE0vHya.s:672    .text.vescSetCurrent:0000000000000030 $d
+     /tmp/ccE0vHya.s:677    .text.vescSetERPM:0000000000000000 $t
+     /tmp/ccE0vHya.s:682    .text.vescSetERPM:0000000000000000 vescSetERPM
+     /tmp/ccE0vHya.s:733    .text.vescSetERPM:0000000000000030 $d
+     /tmp/ccE0vHya.s:738    .text.vescNextByte:0000000000000000 $t
+     /tmp/ccE0vHya.s:743    .text.vescNextByte:0000000000000000 vescNextByte
+     /tmp/ccE0vHya.s:867    .text.vescNextByte:0000000000000098 $d
+     /tmp/ccE0vHya.s:876    .text.HAL_UART_RxCpltCallback:0000000000000000 $t
+     /tmp/ccE0vHya.s:881    .text.HAL_UART_RxCpltCallback:0000000000000000 HAL_UART_RxCpltCallback
+     /tmp/ccE0vHya.s:921    .text.HAL_UART_RxCpltCallback:0000000000000028 $d
+     /tmp/ccE0vHya.s:933    .bss.incSize.6833:0000000000000000 incSize.6833
+     /tmp/ccE0vHya.s:934    .bss.incSize.6833:0000000000000000 $d
+     /tmp/ccE0vHya.s:936    .bss.incData:0000000000000000 $d
+     /tmp/ccE0vHya.s:940    .bss.incData:0000000000000000 incData
+     /tmp/ccE0vHya.s:943    .bss.crc.6836:0000000000000000 $d
+     /tmp/ccE0vHya.s:947    .bss.crc.6836:0000000000000000 crc.6836
+     /tmp/ccE0vHya.s:953    .bss.uartBuffer:0000000000000000 uartBuffer
+     /tmp/ccE0vHya.s:954    .bss.uartBuffer:0000000000000000 $d
+     /tmp/ccE0vHya.s:956    .rodata.str1.4:0000000000000000 $d
+     /tmp/ccE0vHya.s:963    .bss.state.6834:0000000000000000 state.6834
+     /tmp/ccE0vHya.s:964    .bss.state.6834:0000000000000000 $d
+     /tmp/ccE0vHya.s:969    .bss.idx.6835:0000000000000000 idx.6835
+     /tmp/ccE0vHya.s:970    .bss.idx.6835:0000000000000000 $d
+     /tmp/ccE0vHya.s:972    .bss.sendBuf:0000000000000000 $d
+     /tmp/ccE0vHya.s:976    .bss.sendBuf:0000000000000000 sendBuf
+     /tmp/ccE0vHya.s:979    .bss.payload:0000000000000000 $d
+     /tmp/ccE0vHya.s:983    .bss.payload:0000000000000000 payload
+     /tmp/ccE0vHya.s:986    .rodata.crc16Tab:0000000000000000 $d
+     /tmp/ccE0vHya.s:990    .rodata.crc16Tab:0000000000000000 crc16Tab
+ARM GAS  /tmp/ccE0vHya.s 			page 35
+
+
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+HAL_NVIC_DisableIRQ
+HAL_UART_Transmit_IT
+HAL_NVIC_EnableIRQ
+uart4Handle
+HAL_UART_Receive_IT
+_Error_Handler

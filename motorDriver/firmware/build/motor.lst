@@ -1,0 +1,263 @@
+ARM GAS  /tmp/ccem54k6.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"motor.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.setPermille,"ax",%progbits
+  19              		.align	2
+  20              		.thumb
+  21              		.thumb_func
+  23              	setPermille:
+  24              	.LFB63:
+  25              		.file 1 "Src/motor.c"
+   1:Src/motor.c   **** #include "motor.h"
+   2:Src/motor.c   **** 
+   3:Src/motor.c   **** #ifdef USE_POLOLU_DRIVER
+   4:Src/motor.c   **** 
+   5:Src/motor.c   **** static void setPermille(uint16_t permille)
+   6:Src/motor.c   **** {
+  26              		.loc 1 6 0
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 0
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30              		@ link register save eliminated.
+  31              	.LVL0:
+   7:Src/motor.c   **** 	//TODO remap for freq here
+   8:Src/motor.c   **** 	__HAL_TIM_SET_COMPARE(tim3Handle, TIM_CHANNEL_1, permille);
+  32              		.loc 1 8 0
+  33 0000 024B     		ldr	r3, .L2
+  34 0002 1B68     		ldr	r3, [r3]
+  35 0004 1B68     		ldr	r3, [r3]
+  36 0006 5863     		str	r0, [r3, #52]
+  37 0008 7047     		bx	lr
+  38              	.L3:
+  39 000a 00BF     		.align	2
+  40              	.L2:
+  41 000c 00000000 		.word	tim3Handle
+  42              		.cfi_endproc
+  43              	.LFE63:
+  45              		.section	.text.motorInit,"ax",%progbits
+  46              		.align	2
+  47              		.global	motorInit
+  48              		.thumb
+  49              		.thumb_func
+  51              	motorInit:
+  52              	.LFB64:
+ARM GAS  /tmp/ccem54k6.s 			page 2
+
+
+   9:Src/motor.c   **** }
+  10:Src/motor.c   **** 
+  11:Src/motor.c   **** void motorInit()
+  12:Src/motor.c   **** {
+  53              		.loc 1 12 0
+  54              		.cfi_startproc
+  55              		@ args = 0, pretend = 0, frame = 0
+  56              		@ frame_needed = 0, uses_anonymous_args = 0
+  57 0000 08B5     		push	{r3, lr}
+  58              	.LCFI0:
+  59              		.cfi_def_cfa_offset 8
+  60              		.cfi_offset 3, -8
+  61              		.cfi_offset 14, -4
+  13:Src/motor.c   **** 	setPermille(0);
+  62              		.loc 1 13 0
+  63 0002 0020     		movs	r0, #0
+  64 0004 FFF7FEFF 		bl	setPermille
+  65              	.LVL1:
+  14:Src/motor.c   **** 	HAL_TIM_PWM_Start(tim3Handle, TIM_CHANNEL_1);
+  66              		.loc 1 14 0
+  67 0008 054B     		ldr	r3, .L6
+  68 000a 1868     		ldr	r0, [r3]
+  69 000c 0021     		movs	r1, #0
+  70 000e FFF7FEFF 		bl	HAL_TIM_PWM_Start
+  71              	.LVL2:
+  15:Src/motor.c   **** 	HAL_GPIO_WritePin(POLOLU_SLEEP_GPIO_Port, POLOLU_SLEEP_Pin, 1);
+  72              		.loc 1 15 0
+  73 0012 0448     		ldr	r0, .L6+4
+  74 0014 0121     		movs	r1, #1
+  75 0016 0A46     		mov	r2, r1
+  76 0018 FFF7FEFF 		bl	HAL_GPIO_WritePin
+  77              	.LVL3:
+  78 001c 08BD     		pop	{r3, pc}
+  79              	.L7:
+  80 001e 00BF     		.align	2
+  81              	.L6:
+  82 0020 00000000 		.word	tim3Handle
+  83 0024 000C0140 		.word	1073810432
+  84              		.cfi_endproc
+  85              	.LFE64:
+  87              		.section	.text.motorSetPower,"ax",%progbits
+  88              		.align	2
+  89              		.global	motorSetPower
+  90              		.thumb
+  91              		.thumb_func
+  93              	motorSetPower:
+  94              	.LFB65:
+  16:Src/motor.c   **** }
+  17:Src/motor.c   **** 
+  18:Src/motor.c   **** int motorSetPower(int permille)
+  19:Src/motor.c   **** {
+  95              		.loc 1 19 0
+  96              		.cfi_startproc
+  97              		@ args = 0, pretend = 0, frame = 0
+  98              		@ frame_needed = 0, uses_anonymous_args = 0
+  99              	.LVL4:
+ 100 0000 10B5     		push	{r4, lr}
+ARM GAS  /tmp/ccem54k6.s 			page 3
+
+
+ 101              	.LCFI1:
+ 102              		.cfi_def_cfa_offset 8
+ 103              		.cfi_offset 4, -8
+ 104              		.cfi_offset 14, -4
+ 105 0002 0446     		mov	r4, r0
+  20:Src/motor.c   **** 	if (permille < -1000 || permille > 1000)
+ 106              		.loc 1 20 0
+ 107 0004 00F57A73 		add	r3, r0, #1000
+ 108 0008 B3F5FA6F 		cmp	r3, #2000
+ 109 000c 12D8     		bhi	.L12
+  21:Src/motor.c   **** 		return -1;
+  22:Src/motor.c   **** 	if (permille < 0) {
+ 110              		.loc 1 22 0
+ 111 000e 0028     		cmp	r0, #0
+ 112 0010 06DA     		bge	.L10
+  23:Src/motor.c   **** 		HAL_GPIO_WritePin(POLOLU_DIR_GPIO_Port, POLOLU_DIR_Pin, 1);
+ 113              		.loc 1 23 0
+ 114 0012 0A48     		ldr	r0, .L14
+ 115              	.LVL5:
+ 116 0014 2021     		movs	r1, #32
+ 117 0016 0122     		movs	r2, #1
+ 118 0018 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 119              	.LVL6:
+  24:Src/motor.c   **** 		permille = -permille;
+ 120              		.loc 1 24 0
+ 121 001c 6442     		negs	r4, r4
+ 122              	.LVL7:
+ 123 001e 04E0     		b	.L11
+ 124              	.LVL8:
+ 125              	.L10:
+  25:Src/motor.c   **** 	} else {
+  26:Src/motor.c   **** 		HAL_GPIO_WritePin(POLOLU_DIR_GPIO_Port, POLOLU_DIR_Pin, 0);
+ 126              		.loc 1 26 0
+ 127 0020 0648     		ldr	r0, .L14
+ 128              	.LVL9:
+ 129 0022 2021     		movs	r1, #32
+ 130 0024 0022     		movs	r2, #0
+ 131 0026 FFF7FEFF 		bl	HAL_GPIO_WritePin
+ 132              	.LVL10:
+ 133              	.L11:
+  27:Src/motor.c   **** 	}
+  28:Src/motor.c   **** 	setPermille(permille);
+ 134              		.loc 1 28 0
+ 135 002a A0B2     		uxth	r0, r4
+ 136 002c FFF7FEFF 		bl	setPermille
+ 137              	.LVL11:
+  29:Src/motor.c   **** 	return 0;
+ 138              		.loc 1 29 0
+ 139 0030 0020     		movs	r0, #0
+ 140 0032 10BD     		pop	{r4, pc}
+ 141              	.LVL12:
+ 142              	.L12:
+  21:Src/motor.c   **** 	if (permille < 0) {
+ 143              		.loc 1 21 0
+ 144 0034 4FF0FF30 		mov	r0, #-1
+ 145              	.LVL13:
+  30:Src/motor.c   **** }
+ARM GAS  /tmp/ccem54k6.s 			page 4
+
+
+ 146              		.loc 1 30 0
+ 147 0038 10BD     		pop	{r4, pc}
+ 148              	.LVL14:
+ 149              	.L15:
+ 150 003a 00BF     		.align	2
+ 151              	.L14:
+ 152 003c 000C0140 		.word	1073810432
+ 153              		.cfi_endproc
+ 154              	.LFE65:
+ 156              		.section	.text.getFault,"ax",%progbits
+ 157              		.align	2
+ 158              		.global	getFault
+ 159              		.thumb
+ 160              		.thumb_func
+ 162              	getFault:
+ 163              	.LFB66:
+  31:Src/motor.c   **** 
+  32:Src/motor.c   **** bool getFault()
+  33:Src/motor.c   **** {
+ 164              		.loc 1 33 0
+ 165              		.cfi_startproc
+ 166              		@ args = 0, pretend = 0, frame = 0
+ 167              		@ frame_needed = 0, uses_anonymous_args = 0
+ 168 0000 08B5     		push	{r3, lr}
+ 169              	.LCFI2:
+ 170              		.cfi_def_cfa_offset 8
+ 171              		.cfi_offset 3, -8
+ 172              		.cfi_offset 14, -4
+  34:Src/motor.c   **** 	return !HAL_GPIO_ReadPin(POLOLU_FAULT_GPIO_Port, POLOLU_FAULT_Pin);
+ 173              		.loc 1 34 0
+ 174 0002 0448     		ldr	r0, .L18
+ 175 0004 0221     		movs	r1, #2
+ 176 0006 FFF7FEFF 		bl	HAL_GPIO_ReadPin
+ 177              	.LVL15:
+  35:Src/motor.c   **** }
+ 178              		.loc 1 35 0
+ 179 000a B0FA80F0 		clz	r0, r0
+ 180 000e 4009     		lsrs	r0, r0, #5
+ 181 0010 08BD     		pop	{r3, pc}
+ 182              	.L19:
+ 183 0012 00BF     		.align	2
+ 184              	.L18:
+ 185 0014 000C0140 		.word	1073810432
+ 186              		.cfi_endproc
+ 187              	.LFE66:
+ 189              		.text
+ 190              	.Letext0:
+ 191              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 192              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 193              		.file 4 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 194              		.file 5 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 195              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_gpio.h"
+ 196              		.file 7 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 197              		.file 8 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_tim.h"
+ 198              		.file 9 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 199              		.file 10 "Inc/handles.h"
+ARM GAS  /tmp/ccem54k6.s 			page 5
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 motor.c
+     /tmp/ccem54k6.s:19     .text.setPermille:0000000000000000 $t
+     /tmp/ccem54k6.s:23     .text.setPermille:0000000000000000 setPermille
+     /tmp/ccem54k6.s:41     .text.setPermille:000000000000000c $d
+     /tmp/ccem54k6.s:46     .text.motorInit:0000000000000000 $t
+     /tmp/ccem54k6.s:51     .text.motorInit:0000000000000000 motorInit
+     /tmp/ccem54k6.s:82     .text.motorInit:0000000000000020 $d
+     /tmp/ccem54k6.s:88     .text.motorSetPower:0000000000000000 $t
+     /tmp/ccem54k6.s:93     .text.motorSetPower:0000000000000000 motorSetPower
+     /tmp/ccem54k6.s:152    .text.motorSetPower:000000000000003c $d
+     /tmp/ccem54k6.s:157    .text.getFault:0000000000000000 $t
+     /tmp/ccem54k6.s:162    .text.getFault:0000000000000000 getFault
+     /tmp/ccem54k6.s:185    .text.getFault:0000000000000014 $d
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+tim3Handle
+HAL_TIM_PWM_Start
+HAL_GPIO_WritePin
+HAL_GPIO_ReadPin

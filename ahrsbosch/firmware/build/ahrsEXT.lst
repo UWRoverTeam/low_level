@@ -1,0 +1,864 @@
+ARM GAS  /tmp/cczBGVhG.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 2
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"ahrsEXT.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.ahrsInit,"ax",%progbits
+  19              		.align	2
+  20              		.global	ahrsInit
+  21              		.thumb
+  22              		.thumb_func
+  24              	ahrsInit:
+  25              	.LFB64:
+  26              		.file 1 "Src/ahrsEXT.c"
+   1:Src/ahrsEXT.c **** #include "ahrsEXT.h"
+   2:Src/ahrsEXT.c **** 
+   3:Src/ahrsEXT.c **** static uint8_t uartBuffer;
+   4:Src/ahrsEXT.c **** static uint8_t receiveBuffer[64];
+   5:Src/ahrsEXT.c **** static uint8_t interruptCounter;
+   6:Src/ahrsEXT.c **** 
+   7:Src/ahrsEXT.c **** static Orientation received; //changed in interrupt
+   8:Src/ahrsEXT.c **** 
+   9:Src/ahrsEXT.c **** static Orientation last;
+  10:Src/ahrsEXT.c **** 
+  11:Src/ahrsEXT.c **** static const uint16_t crc16Tab[] = {
+  12:Src/ahrsEXT.c **** 	0x0000, 0x1021, 0x2042, 0x3063, 0x4084,
+  13:Src/ahrsEXT.c **** 	0x50a5, 0x60c6, 0x70e7, 0x8108, 0x9129, 0xa14a, 0xb16b, 0xc18c, 0xd1ad,
+  14:Src/ahrsEXT.c **** 	0xe1ce, 0xf1ef, 0x1231, 0x0210, 0x3273, 0x2252, 0x52b5, 0x4294, 0x72f7,
+  15:Src/ahrsEXT.c **** 	0x62d6, 0x9339, 0x8318, 0xb37b, 0xa35a, 0xd3bd, 0xc39c, 0xf3ff, 0xe3de,
+  16:Src/ahrsEXT.c **** 	0x2462, 0x3443, 0x0420, 0x1401, 0x64e6, 0x74c7, 0x44a4, 0x5485, 0xa56a,
+  17:Src/ahrsEXT.c **** 	0xb54b, 0x8528, 0x9509, 0xe5ee, 0xf5cf, 0xc5ac, 0xd58d, 0x3653, 0x2672,
+  18:Src/ahrsEXT.c **** 	0x1611, 0x0630, 0x76d7, 0x66f6, 0x5695, 0x46b4, 0xb75b, 0xa77a, 0x9719,
+  19:Src/ahrsEXT.c **** 	0x8738, 0xf7df, 0xe7fe, 0xd79d, 0xc7bc, 0x48c4, 0x58e5, 0x6886, 0x78a7,
+  20:Src/ahrsEXT.c **** 	0x0840, 0x1861, 0x2802, 0x3823, 0xc9cc, 0xd9ed, 0xe98e, 0xf9af, 0x8948,
+  21:Src/ahrsEXT.c **** 	0x9969, 0xa90a, 0xb92b, 0x5af5, 0x4ad4, 0x7ab7, 0x6a96, 0x1a71, 0x0a50,
+  22:Src/ahrsEXT.c **** 	0x3a33, 0x2a12, 0xdbfd, 0xcbdc, 0xfbbf, 0xeb9e, 0x9b79, 0x8b58, 0xbb3b,
+  23:Src/ahrsEXT.c **** 	0xab1a, 0x6ca6, 0x7c87, 0x4ce4, 0x5cc5, 0x2c22, 0x3c03, 0x0c60, 0x1c41,
+  24:Src/ahrsEXT.c **** 	0xedae, 0xfd8f, 0xcdec, 0xddcd, 0xad2a, 0xbd0b, 0x8d68, 0x9d49, 0x7e97,
+  25:Src/ahrsEXT.c **** 	0x6eb6, 0x5ed5, 0x4ef4, 0x3e13, 0x2e32, 0x1e51, 0x0e70, 0xff9f, 0xefbe,
+  26:Src/ahrsEXT.c **** 	0xdfdd, 0xcffc, 0xbf1b, 0xaf3a, 0x9f59, 0x8f78, 0x9188, 0x81a9, 0xb1ca,
+  27:Src/ahrsEXT.c **** 	0xa1eb, 0xd10c, 0xc12d, 0xf14e, 0xe16f, 0x1080, 0x00a1, 0x30c2, 0x20e3,
+  28:Src/ahrsEXT.c **** 	0x5004, 0x4025, 0x7046, 0x6067, 0x83b9, 0x9398, 0xa3fb, 0xb3da, 0xc33d,
+  29:Src/ahrsEXT.c **** 	0xd31c, 0xe37f, 0xf35e, 0x02b1, 0x1290, 0x22f3, 0x32d2, 0x4235, 0x5214,
+  30:Src/ahrsEXT.c **** 	0x6277, 0x7256, 0xb5ea, 0xa5cb, 0x95a8, 0x8589, 0xf56e, 0xe54f, 0xd52c,
+  31:Src/ahrsEXT.c **** 	0xc50d, 0x34e2, 0x24c3, 0x14a0, 0x0481, 0x7466, 0x6447, 0x5424, 0x4405,
+  32:Src/ahrsEXT.c **** 	0xa7db, 0xb7fa, 0x8799, 0x97b8, 0xe75f, 0xf77e, 0xc71d, 0xd73c, 0x26d3,
+ARM GAS  /tmp/cczBGVhG.s 			page 2
+
+
+  33:Src/ahrsEXT.c **** 	0x36f2, 0x0691, 0x16b0, 0x6657, 0x7676, 0x4615, 0x5634, 0xd94c, 0xc96d,
+  34:Src/ahrsEXT.c **** 	0xf90e, 0xe92f, 0x99c8, 0x89e9, 0xb98a, 0xa9ab, 0x5844, 0x4865, 0x7806,
+  35:Src/ahrsEXT.c **** 	0x6827, 0x18c0, 0x08e1, 0x3882, 0x28a3, 0xcb7d, 0xdb5c, 0xeb3f, 0xfb1e,
+  36:Src/ahrsEXT.c **** 	0x8bf9, 0x9bd8, 0xabbb, 0xbb9a, 0x4a75, 0x5a54, 0x6a37, 0x7a16, 0x0af1,
+  37:Src/ahrsEXT.c **** 	0x1ad0, 0x2ab3, 0x3a92, 0xfd2e, 0xed0f, 0xdd6c, 0xcd4d, 0xbdaa, 0xad8b,
+  38:Src/ahrsEXT.c **** 	0x9de8, 0x8dc9, 0x7c26, 0x6c07, 0x5c64, 0x4c45, 0x3ca2, 0x2c83, 0x1ce0,
+  39:Src/ahrsEXT.c **** 	0x0cc1, 0xef1f, 0xff3e, 0xcf5d, 0xdf7c, 0xaf9b, 0xbfba, 0x8fd9, 0x9ff8,
+  40:Src/ahrsEXT.c **** 	0x6e17, 0x7e36, 0x4e55, 0x5e74, 0x2e93, 0x3eb2, 0x0ed1, 0x1ef0
+  41:Src/ahrsEXT.c **** };
+  42:Src/ahrsEXT.c **** 
+  43:Src/ahrsEXT.c **** static uint16_t crc16(uint8_t *data, uint32_t n) {
+  44:Src/ahrsEXT.c **** 	uint16_t cksum = 0;
+  45:Src/ahrsEXT.c **** 	while (n--)
+  46:Src/ahrsEXT.c **** 		cksum = (cksum << 8) ^ crc16Tab[(((cksum >> 8) ^ *data++) & 0xFF)];
+  47:Src/ahrsEXT.c **** 	return cksum;
+  48:Src/ahrsEXT.c **** }
+  49:Src/ahrsEXT.c **** 
+  50:Src/ahrsEXT.c **** void ahrsInit()
+  51:Src/ahrsEXT.c **** {
+  27              		.loc 1 51 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+  52:Src/ahrsEXT.c **** 	HAL_UART_Receive_IT(uart3Handle, &uartBuffer, 1);
+  32              		.loc 1 52 0
+  33 0000 024B     		ldr	r3, .L2
+  34 0002 0349     		ldr	r1, .L2+4
+  35 0004 1868     		ldr	r0, [r3]
+  36 0006 0122     		movs	r2, #1
+  37 0008 FFF7FEBF 		b	HAL_UART_Receive_IT
+  38              	.LVL0:
+  39              	.L3:
+  40              		.align	2
+  41              	.L2:
+  42 000c 00000000 		.word	uart3Handle
+  43 0010 00000000 		.word	.LANCHOR0
+  44              		.cfi_endproc
+  45              	.LFE64:
+  47              		.section	.text.getLastAhrs,"ax",%progbits
+  48              		.align	2
+  49              		.global	getLastAhrs
+  50              		.thumb
+  51              		.thumb_func
+  53              	getLastAhrs:
+  54              	.LFB65:
+  53:Src/ahrsEXT.c **** }
+  54:Src/ahrsEXT.c **** 
+  55:Src/ahrsEXT.c **** Orientation getLastAhrs()
+  56:Src/ahrsEXT.c **** {
+  55              		.loc 1 56 0
+  56              		.cfi_startproc
+  57              		@ args = 0, pretend = 0, frame = 0
+  58              		@ frame_needed = 0, uses_anonymous_args = 0
+  59              		@ link register save eliminated.
+  60              	.LVL1:
+  61 0000 0246     		mov	r2, r0
+ARM GAS  /tmp/cczBGVhG.s 			page 3
+
+
+  57:Src/ahrsEXT.c **** 	Orientation tmp;
+  58:Src/ahrsEXT.c **** 	uint8_t before = interruptCounter;
+  59:Src/ahrsEXT.c **** 	tmp = received;
+  62              		.loc 1 59 0
+  63 0002 0849     		ldr	r1, .L6
+  56:Src/ahrsEXT.c **** 	Orientation tmp;
+  64              		.loc 1 56 0
+  65 0004 10B4     		push	{r4}
+  66              	.LCFI0:
+  67              		.cfi_def_cfa_offset 4
+  68              		.cfi_offset 4, -4
+  60:Src/ahrsEXT.c **** 	if (before == interruptCounter) //there was no interrupt
+  61:Src/ahrsEXT.c **** 		last = tmp;
+  69              		.loc 1 61 0
+  70 0006 084B     		ldr	r3, .L6+4
+  59:Src/ahrsEXT.c **** 	if (before == interruptCounter) //there was no interrupt
+  71              		.loc 1 59 0
+  72 0008 4C88     		ldrh	r4, [r1, #2]
+  73              	.LVL2:
+  74              		.loc 1 61 0
+  75 000a 0888     		ldrh	r0, [r1]
+  76              	.LVL3:
+  59:Src/ahrsEXT.c **** 	if (before == interruptCounter) //there was no interrupt
+  77              		.loc 1 59 0
+  78 000c 8988     		ldrh	r1, [r1, #4]
+  79              	.LVL4:
+  80              		.loc 1 61 0
+  81 000e 5C80     		strh	r4, [r3, #2]	@ movhi
+  82 0010 1880     		strh	r0, [r3]	@ movhi
+  83 0012 9980     		strh	r1, [r3, #4]	@ movhi
+  62:Src/ahrsEXT.c **** 
+  63:Src/ahrsEXT.c **** 	return last;
+  84              		.loc 1 63 0
+  85 0014 1868     		ldr	r0, [r3]	@ unaligned
+  86 0016 9B88     		ldrh	r3, [r3, #4]	@ unaligned
+  87 0018 1060     		str	r0, [r2]	@ unaligned
+  88 001a 9380     		strh	r3, [r2, #4]	@ unaligned
+  64:Src/ahrsEXT.c **** }
+  89              		.loc 1 64 0
+  90 001c 1046     		mov	r0, r2
+  91 001e 5DF8044B 		ldr	r4, [sp], #4
+  92              	.LCFI1:
+  93              		.cfi_restore 4
+  94              		.cfi_def_cfa_offset 0
+  95              	.LVL5:
+  96 0022 7047     		bx	lr
+  97              	.L7:
+  98              		.align	2
+  99              	.L6:
+ 100 0024 00000000 		.word	.LANCHOR1
+ 101 0028 00000000 		.word	.LANCHOR2
+ 102              		.cfi_endproc
+ 103              	.LFE65:
+ 105              		.section	.text.HAL_UART_RxCpltCallback,"ax",%progbits
+ 106              		.align	2
+ 107              		.global	HAL_UART_RxCpltCallback
+ 108              		.thumb
+ARM GAS  /tmp/cczBGVhG.s 			page 4
+
+
+ 109              		.thumb_func
+ 111              	HAL_UART_RxCpltCallback:
+ 112              	.LFB68:
+  65:Src/ahrsEXT.c **** 
+  66:Src/ahrsEXT.c **** static void processInfo() //in interrupt
+  67:Src/ahrsEXT.c **** {
+  68:Src/ahrsEXT.c **** 	++interruptCounter;
+  69:Src/ahrsEXT.c **** 	received.pitch = *(int16_t*)&receiveBuffer[3];
+  70:Src/ahrsEXT.c **** 	received.roll = *(int16_t*)&receiveBuffer[5];
+  71:Src/ahrsEXT.c **** 	received.heading = *(uint16_t*)&receiveBuffer[7];
+  72:Src/ahrsEXT.c **** }
+  73:Src/ahrsEXT.c **** 
+  74:Src/ahrsEXT.c **** static void ahrsNextByte(uint8_t byte) //in interrupt
+  75:Src/ahrsEXT.c **** {
+  76:Src/ahrsEXT.c **** 	static uint32_t index = 0;
+  77:Src/ahrsEXT.c **** 	uint32_t size = (uint32_t)receiveBuffer[2] + 5; //may be invalid here - doesnt matter
+  78:Src/ahrsEXT.c **** 	if (index == 0) {
+  79:Src/ahrsEXT.c **** 		if (byte == 42)
+  80:Src/ahrsEXT.c **** 			receiveBuffer[index++] = byte; //SYNC_BYTE
+  81:Src/ahrsEXT.c **** 		else
+  82:Src/ahrsEXT.c **** 			return;
+  83:Src/ahrsEXT.c **** 	} else if (index == 1) {
+  84:Src/ahrsEXT.c **** 		receiveBuffer[index++] = byte; //id
+  85:Src/ahrsEXT.c **** 	} else if (index == 2) {
+  86:Src/ahrsEXT.c **** 		receiveBuffer[index++] = byte; //n
+  87:Src/ahrsEXT.c **** 	} else if (index < size - 1) {
+  88:Src/ahrsEXT.c **** 		receiveBuffer[index++] = byte; //data or crc
+  89:Src/ahrsEXT.c **** 	} else {
+  90:Src/ahrsEXT.c **** 		receiveBuffer[index++] = byte; //crc
+  91:Src/ahrsEXT.c **** 		index = 0;
+  92:Src/ahrsEXT.c **** 		uint16_t localCrc = crc16(receiveBuffer, size - 2);
+  93:Src/ahrsEXT.c **** 		uint16_t receivedCrc = ((uint16_t)receiveBuffer[size - 2] << 8) | receiveBuffer[size - 1];
+  94:Src/ahrsEXT.c **** 		if (localCrc == receivedCrc)
+  95:Src/ahrsEXT.c **** 			processInfo();
+  96:Src/ahrsEXT.c **** 	}
+  97:Src/ahrsEXT.c **** }
+  98:Src/ahrsEXT.c **** 
+  99:Src/ahrsEXT.c **** void HAL_UART_RxCpltCallback(UART_HandleTypeDef *huart) //in interrupt
+ 100:Src/ahrsEXT.c **** {
+ 113              		.loc 1 100 0
+ 114              		.cfi_startproc
+ 115              		@ args = 0, pretend = 0, frame = 0
+ 116              		@ frame_needed = 0, uses_anonymous_args = 0
+ 117              	.LVL6:
+ 118 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 119              	.LCFI2:
+ 120              		.cfi_def_cfa_offset 24
+ 121              		.cfi_offset 4, -24
+ 122              		.cfi_offset 5, -20
+ 123              		.cfi_offset 6, -16
+ 124              		.cfi_offset 7, -12
+ 125              		.cfi_offset 8, -8
+ 126              		.cfi_offset 14, -4
+ 101:Src/ahrsEXT.c **** 	if (huart != uart3Handle) //here we have only UART3
+ 127              		.loc 1 101 0
+ 128 0004 344D     		ldr	r5, .L25
+ 129 0006 2C68     		ldr	r4, [r5]
+ARM GAS  /tmp/cczBGVhG.s 			page 5
+
+
+ 130 0008 8442     		cmp	r4, r0
+ 131 000a 04D0     		beq	.L9
+ 102:Src/ahrsEXT.c **** 		_Error_Handler(__FILE__, __LINE__);
+ 132              		.loc 1 102 0
+ 133 000c 3348     		ldr	r0, .L25+4
+ 134              	.LVL7:
+ 135 000e 6621     		movs	r1, #102
+ 136 0010 FFF7FEFF 		bl	_Error_Handler
+ 137              	.LVL8:
+ 138 0014 2C68     		ldr	r4, [r5]
+ 139              	.L9:
+ 140              	.LBB14:
+ 141              	.LBB15:
+  78:Src/ahrsEXT.c **** 		if (byte == 42)
+ 142              		.loc 1 78 0
+ 143 0016 324D     		ldr	r5, .L25+8
+ 144              	.LBE15:
+ 145              	.LBE14:
+ 103:Src/ahrsEXT.c **** 	ahrsNextByte(uartBuffer);
+ 146              		.loc 1 103 0
+ 147 0018 324B     		ldr	r3, .L25+12
+ 148              	.LBB24:
+ 149              	.LBB21:
+  77:Src/ahrsEXT.c **** 	if (index == 0) {
+ 150              		.loc 1 77 0
+ 151 001a 3348     		ldr	r0, .L25+16
+  78:Src/ahrsEXT.c **** 		if (byte == 42)
+ 152              		.loc 1 78 0
+ 153 001c 2A68     		ldr	r2, [r5]
+ 154              	.LBE21:
+ 155              	.LBE24:
+ 156              		.loc 1 103 0
+ 157 001e 1E78     		ldrb	r6, [r3]	@ zero_extendqisi2
+ 158              	.LVL9:
+ 159              	.LBB25:
+ 160              	.LBB22:
+  77:Src/ahrsEXT.c **** 	if (index == 0) {
+ 161              		.loc 1 77 0
+ 162 0020 90F802E0 		ldrb	lr, [r0, #2]	@ zero_extendqisi2
+ 163              	.LVL10:
+  78:Src/ahrsEXT.c **** 		if (byte == 42)
+ 164              		.loc 1 78 0
+ 165 0024 42B9     		cbnz	r2, .L10
+  79:Src/ahrsEXT.c **** 			receiveBuffer[index++] = byte; //SYNC_BYTE
+ 166              		.loc 1 79 0
+ 167 0026 2A2E     		cmp	r6, #42
+ 168 0028 46D0     		beq	.L21
+ 169              	.LVL11:
+ 170              	.L12:
+ 171              	.LBE22:
+ 172              	.LBE25:
+ 104:Src/ahrsEXT.c **** 	HAL_UART_Receive_IT(uart3Handle, &uartBuffer, 1);
+ 173              		.loc 1 104 0
+ 174 002a 2046     		mov	r0, r4
+ 105:Src/ahrsEXT.c **** }
+ 175              		.loc 1 105 0
+ 176 002c BDE8F041 		pop	{r4, r5, r6, r7, r8, lr}
+ARM GAS  /tmp/cczBGVhG.s 			page 6
+
+
+ 177              	.LCFI3:
+ 178              		.cfi_remember_state
+ 179              		.cfi_restore 14
+ 180              		.cfi_restore 8
+ 181              		.cfi_restore 7
+ 182              		.cfi_restore 6
+ 183              		.cfi_restore 5
+ 184              		.cfi_restore 4
+ 185              		.cfi_def_cfa_offset 0
+ 104:Src/ahrsEXT.c **** 	HAL_UART_Receive_IT(uart3Handle, &uartBuffer, 1);
+ 186              		.loc 1 104 0
+ 187 0030 2C49     		ldr	r1, .L25+12
+ 188 0032 0122     		movs	r2, #1
+ 189 0034 FFF7FEBF 		b	HAL_UART_Receive_IT
+ 190              	.LVL12:
+ 191              	.L10:
+ 192              	.LCFI4:
+ 193              		.cfi_restore_state
+ 194              	.LBB26:
+ 195              	.LBB23:
+  83:Src/ahrsEXT.c **** 		receiveBuffer[index++] = byte; //id
+ 196              		.loc 1 83 0
+ 197 0038 012A     		cmp	r2, #1
+ 198 003a 45D0     		beq	.L22
+  85:Src/ahrsEXT.c **** 		receiveBuffer[index++] = byte; //n
+ 199              		.loc 1 85 0
+ 200 003c 022A     		cmp	r2, #2
+ 201 003e 47D0     		beq	.L23
+  87:Src/ahrsEXT.c **** 		receiveBuffer[index++] = byte; //data or crc
+ 202              		.loc 1 87 0
+ 203 0040 0EF1040C 		add	ip, lr, #4
+ 204 0044 6245     		cmp	r2, ip
+ 205 0046 3BD3     		bcc	.L24
+ 206              	.LBB16:
+  91:Src/ahrsEXT.c **** 		uint16_t localCrc = crc16(receiveBuffer, size - 2);
+ 207              		.loc 1 91 0
+ 208 0048 4FF00008 		mov	r8, #0
+  92:Src/ahrsEXT.c **** 		uint16_t receivedCrc = ((uint16_t)receiveBuffer[size - 2] << 8) | receiveBuffer[size - 1];
+ 209              		.loc 1 92 0
+ 210 004c 4346     		mov	r3, r8
+ 211 004e 0146     		mov	r1, r0
+ 212 0050 0EF1030E 		add	lr, lr, #3
+ 213              	.LVL13:
+ 214 0054 254F     		ldr	r7, .L25+20
+  90:Src/ahrsEXT.c **** 		index = 0;
+ 215              		.loc 1 90 0
+ 216 0056 8654     		strb	r6, [r0, r2]
+  91:Src/ahrsEXT.c **** 		uint16_t localCrc = crc16(receiveBuffer, size - 2);
+ 217              		.loc 1 91 0
+ 218 0058 C5F80080 		str	r8, [r5]
+ 219 005c 00EB0E06 		add	r6, r0, lr
+ 220              	.LVL14:
+ 221              	.L16:
+ 222              	.LBB17:
+ 223              	.LBB18:
+  46:Src/ahrsEXT.c **** 	return cksum;
+ 224              		.loc 1 46 0
+ARM GAS  /tmp/cczBGVhG.s 			page 7
+
+
+ 225 0060 11F8012B 		ldrb	r2, [r1], #1	@ zero_extendqisi2
+ 226              	.LVL15:
+ 227 0064 82EA1322 		eor	r2, r2, r3, lsr #8
+ 228 0068 37F81220 		ldrh	r2, [r7, r2, lsl #1]
+  45:Src/ahrsEXT.c **** 		cksum = (cksum << 8) ^ crc16Tab[(((cksum >> 8) ^ *data++) & 0xFF)];
+ 229              		.loc 1 45 0
+ 230 006c B142     		cmp	r1, r6
+  46:Src/ahrsEXT.c **** 	return cksum;
+ 231              		.loc 1 46 0
+ 232 006e 82EA0323 		eor	r3, r2, r3, lsl #8
+ 233              	.LVL16:
+ 234 0072 9BB2     		uxth	r3, r3
+ 235              	.LVL17:
+  45:Src/ahrsEXT.c **** 		cksum = (cksum << 8) ^ crc16Tab[(((cksum >> 8) ^ *data++) & 0xFF)];
+ 236              		.loc 1 45 0
+ 237 0074 F4D1     		bne	.L16
+ 238              	.LVL18:
+ 239              	.LBE18:
+ 240              	.LBE17:
+  93:Src/ahrsEXT.c **** 		if (localCrc == receivedCrc)
+ 241              		.loc 1 93 0
+ 242 0076 10F80E50 		ldrb	r5, [r0, lr]	@ zero_extendqisi2
+ 243 007a 10F80C20 		ldrb	r2, [r0, ip]	@ zero_extendqisi2
+ 244 007e 1A49     		ldr	r1, .L25+16
+ 245              	.LVL19:
+  94:Src/ahrsEXT.c **** 			processInfo();
+ 246              		.loc 1 94 0
+ 247 0080 42EA0522 		orr	r2, r2, r5, lsl #8
+ 248 0084 9A42     		cmp	r2, r3
+ 249 0086 D0D1     		bne	.L12
+ 250              	.LBB19:
+ 251              	.LBB20:
+  68:Src/ahrsEXT.c **** 	received.pitch = *(int16_t*)&receiveBuffer[3];
+ 252              		.loc 1 68 0
+ 253 0088 194F     		ldr	r7, .L25+24
+  69:Src/ahrsEXT.c **** 	received.roll = *(int16_t*)&receiveBuffer[5];
+ 254              		.loc 1 69 0
+ 255 008a CD78     		ldrb	r5, [r1, #3]	@ zero_extendqisi2
+  68:Src/ahrsEXT.c **** 	received.pitch = *(int16_t*)&receiveBuffer[3];
+ 256              		.loc 1 68 0
+ 257 008c 3E78     		ldrb	r6, [r7]	@ zero_extendqisi2
+  69:Src/ahrsEXT.c **** 	received.roll = *(int16_t*)&receiveBuffer[5];
+ 258              		.loc 1 69 0
+ 259 008e 91F80480 		ldrb	r8, [r1, #4]	@ zero_extendqisi2
+  71:Src/ahrsEXT.c **** }
+ 260              		.loc 1 71 0
+ 261 0092 CA79     		ldrb	r2, [r1, #7]	@ zero_extendqisi2
+ 262 0094 91F808E0 		ldrb	lr, [r1, #8]	@ zero_extendqisi2
+ 263              	.LVL20:
+  70:Src/ahrsEXT.c **** 	received.heading = *(uint16_t*)&receiveBuffer[7];
+ 264              		.loc 1 70 0
+ 265 0098 4879     		ldrb	r0, [r1, #5]	@ zero_extendqisi2
+ 266              	.LVL21:
+ 267 009a 91F806C0 		ldrb	ip, [r1, #6]	@ zero_extendqisi2
+ 268              	.LVL22:
+  69:Src/ahrsEXT.c **** 	received.roll = *(int16_t*)&receiveBuffer[5];
+ 269              		.loc 1 69 0
+ARM GAS  /tmp/cczBGVhG.s 			page 8
+
+
+ 270 009e 154B     		ldr	r3, .L25+28
+ 271              	.LVL23:
+  68:Src/ahrsEXT.c **** 	received.pitch = *(int16_t*)&receiveBuffer[3];
+ 272              		.loc 1 68 0
+ 273 00a0 0136     		adds	r6, r6, #1
+  69:Src/ahrsEXT.c **** 	received.roll = *(int16_t*)&receiveBuffer[5];
+ 274              		.loc 1 69 0
+ 275 00a2 45EA0825 		orr	r5, r5, r8, lsl #8
+  70:Src/ahrsEXT.c **** 	received.heading = *(uint16_t*)&receiveBuffer[7];
+ 276              		.loc 1 70 0
+ 277 00a6 40EA0C21 		orr	r1, r0, ip, lsl #8
+ 278              	.LVL24:
+  71:Src/ahrsEXT.c **** }
+ 279              		.loc 1 71 0
+ 280 00aa 42EA0E22 		orr	r2, r2, lr, lsl #8
+  68:Src/ahrsEXT.c **** 	received.pitch = *(int16_t*)&receiveBuffer[3];
+ 281              		.loc 1 68 0
+ 282 00ae 3E70     		strb	r6, [r7]
+  69:Src/ahrsEXT.c **** 	received.roll = *(int16_t*)&receiveBuffer[5];
+ 283              		.loc 1 69 0
+ 284 00b0 1D80     		strh	r5, [r3]	@ movhi
+  70:Src/ahrsEXT.c **** 	received.heading = *(uint16_t*)&receiveBuffer[7];
+ 285              		.loc 1 70 0
+ 286 00b2 5980     		strh	r1, [r3, #2]	@ movhi
+  71:Src/ahrsEXT.c **** }
+ 287              		.loc 1 71 0
+ 288 00b4 9A80     		strh	r2, [r3, #4]	@ movhi
+ 289 00b6 B8E7     		b	.L12
+ 290              	.LVL25:
+ 291              	.L21:
+ 292              	.LBE20:
+ 293              	.LBE19:
+ 294              	.LBE16:
+  80:Src/ahrsEXT.c **** 		else
+ 295              		.loc 1 80 0
+ 296 00b8 0123     		movs	r3, #1
+ 297 00ba 0670     		strb	r6, [r0]
+ 298 00bc 2B60     		str	r3, [r5]
+ 299 00be B4E7     		b	.L12
+ 300              	.L24:
+  88:Src/ahrsEXT.c **** 	} else {
+ 301              		.loc 1 88 0
+ 302 00c0 531C     		adds	r3, r2, #1
+ 303 00c2 8654     		strb	r6, [r0, r2]
+ 304 00c4 2B60     		str	r3, [r5]
+ 305 00c6 B0E7     		b	.L12
+ 306              	.L22:
+  84:Src/ahrsEXT.c **** 	} else if (index == 2) {
+ 307              		.loc 1 84 0
+ 308 00c8 0223     		movs	r3, #2
+ 309 00ca 4670     		strb	r6, [r0, #1]
+ 310 00cc 2B60     		str	r3, [r5]
+ 311 00ce ACE7     		b	.L12
+ 312              	.L23:
+  86:Src/ahrsEXT.c **** 	} else if (index < size - 1) {
+ 313              		.loc 1 86 0
+ 314 00d0 0323     		movs	r3, #3
+ARM GAS  /tmp/cczBGVhG.s 			page 9
+
+
+ 315 00d2 8670     		strb	r6, [r0, #2]
+ 316 00d4 2B60     		str	r3, [r5]
+ 317 00d6 A8E7     		b	.L12
+ 318              	.L26:
+ 319              		.align	2
+ 320              	.L25:
+ 321 00d8 00000000 		.word	uart3Handle
+ 322 00dc 00000000 		.word	.LC0
+ 323 00e0 00000000 		.word	.LANCHOR4
+ 324 00e4 00000000 		.word	.LANCHOR0
+ 325 00e8 00000000 		.word	.LANCHOR3
+ 326 00ec 00000000 		.word	.LANCHOR5
+ 327 00f0 00000000 		.word	.LANCHOR6
+ 328 00f4 00000000 		.word	.LANCHOR1
+ 329              	.LBE23:
+ 330              	.LBE26:
+ 331              		.cfi_endproc
+ 332              	.LFE68:
+ 334              		.section	.bss.receiveBuffer,"aw",%nobits
+ 335              		.align	2
+ 336              		.set	.LANCHOR3,. + 0
+ 339              	receiveBuffer:
+ 340 0000 00000000 		.space	64
+ 340      00000000 
+ 340      00000000 
+ 340      00000000 
+ 340      00000000 
+ 341              		.section	.bss.interruptCounter,"aw",%nobits
+ 342              		.set	.LANCHOR6,. + 0
+ 345              	interruptCounter:
+ 346 0000 00       		.space	1
+ 347              		.section	.bss.last,"aw",%nobits
+ 348              		.align	2
+ 349              		.set	.LANCHOR2,. + 0
+ 352              	last:
+ 353 0000 00000000 		.space	6
+ 353      0000
+ 354              		.section	.bss.uartBuffer,"aw",%nobits
+ 355              		.set	.LANCHOR0,. + 0
+ 358              	uartBuffer:
+ 359 0000 00       		.space	1
+ 360              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 361              		.align	2
+ 362              	.LC0:
+ 363 0000 5372632F 		.ascii	"Src/ahrsEXT.c\000"
+ 363      61687273 
+ 363      4558542E 
+ 363      6300
+ 364              		.section	.bss.received,"aw",%nobits
+ 365              		.align	2
+ 366              		.set	.LANCHOR1,. + 0
+ 369              	received:
+ 370 0000 00000000 		.space	6
+ 370      0000
+ 371              		.section	.rodata.crc16Tab,"a",%progbits
+ 372              		.align	2
+ 373              		.set	.LANCHOR5,. + 0
+ARM GAS  /tmp/cczBGVhG.s 			page 10
+
+
+ 376              	crc16Tab:
+ 377 0000 0000     		.short	0
+ 378 0002 2110     		.short	4129
+ 379 0004 4220     		.short	8258
+ 380 0006 6330     		.short	12387
+ 381 0008 8440     		.short	16516
+ 382 000a A550     		.short	20645
+ 383 000c C660     		.short	24774
+ 384 000e E770     		.short	28903
+ 385 0010 0881     		.short	-32504
+ 386 0012 2991     		.short	-28375
+ 387 0014 4AA1     		.short	-24246
+ 388 0016 6BB1     		.short	-20117
+ 389 0018 8CC1     		.short	-15988
+ 390 001a ADD1     		.short	-11859
+ 391 001c CEE1     		.short	-7730
+ 392 001e EFF1     		.short	-3601
+ 393 0020 3112     		.short	4657
+ 394 0022 1002     		.short	528
+ 395 0024 7332     		.short	12915
+ 396 0026 5222     		.short	8786
+ 397 0028 B552     		.short	21173
+ 398 002a 9442     		.short	17044
+ 399 002c F772     		.short	29431
+ 400 002e D662     		.short	25302
+ 401 0030 3993     		.short	-27847
+ 402 0032 1883     		.short	-31976
+ 403 0034 7BB3     		.short	-19589
+ 404 0036 5AA3     		.short	-23718
+ 405 0038 BDD3     		.short	-11331
+ 406 003a 9CC3     		.short	-15460
+ 407 003c FFF3     		.short	-3073
+ 408 003e DEE3     		.short	-7202
+ 409 0040 6224     		.short	9314
+ 410 0042 4334     		.short	13379
+ 411 0044 2004     		.short	1056
+ 412 0046 0114     		.short	5121
+ 413 0048 E664     		.short	25830
+ 414 004a C774     		.short	29895
+ 415 004c A444     		.short	17572
+ 416 004e 8554     		.short	21637
+ 417 0050 6AA5     		.short	-23190
+ 418 0052 4BB5     		.short	-19125
+ 419 0054 2885     		.short	-31448
+ 420 0056 0995     		.short	-27383
+ 421 0058 EEE5     		.short	-6674
+ 422 005a CFF5     		.short	-2609
+ 423 005c ACC5     		.short	-14932
+ 424 005e 8DD5     		.short	-10867
+ 425 0060 5336     		.short	13907
+ 426 0062 7226     		.short	9842
+ 427 0064 1116     		.short	5649
+ 428 0066 3006     		.short	1584
+ 429 0068 D776     		.short	30423
+ 430 006a F666     		.short	26358
+ 431 006c 9556     		.short	22165
+ 432 006e B446     		.short	18100
+ARM GAS  /tmp/cczBGVhG.s 			page 11
+
+
+ 433 0070 5BB7     		.short	-18597
+ 434 0072 7AA7     		.short	-22662
+ 435 0074 1997     		.short	-26855
+ 436 0076 3887     		.short	-30920
+ 437 0078 DFF7     		.short	-2081
+ 438 007a FEE7     		.short	-6146
+ 439 007c 9DD7     		.short	-10339
+ 440 007e BCC7     		.short	-14404
+ 441 0080 C448     		.short	18628
+ 442 0082 E558     		.short	22757
+ 443 0084 8668     		.short	26758
+ 444 0086 A778     		.short	30887
+ 445 0088 4008     		.short	2112
+ 446 008a 6118     		.short	6241
+ 447 008c 0228     		.short	10242
+ 448 008e 2338     		.short	14371
+ 449 0090 CCC9     		.short	-13876
+ 450 0092 EDD9     		.short	-9747
+ 451 0094 8EE9     		.short	-5746
+ 452 0096 AFF9     		.short	-1617
+ 453 0098 4889     		.short	-30392
+ 454 009a 6999     		.short	-26263
+ 455 009c 0AA9     		.short	-22262
+ 456 009e 2BB9     		.short	-18133
+ 457 00a0 F55A     		.short	23285
+ 458 00a2 D44A     		.short	19156
+ 459 00a4 B77A     		.short	31415
+ 460 00a6 966A     		.short	27286
+ 461 00a8 711A     		.short	6769
+ 462 00aa 500A     		.short	2640
+ 463 00ac 333A     		.short	14899
+ 464 00ae 122A     		.short	10770
+ 465 00b0 FDDB     		.short	-9219
+ 466 00b2 DCCB     		.short	-13348
+ 467 00b4 BFFB     		.short	-1089
+ 468 00b6 9EEB     		.short	-5218
+ 469 00b8 799B     		.short	-25735
+ 470 00ba 588B     		.short	-29864
+ 471 00bc 3BBB     		.short	-17605
+ 472 00be 1AAB     		.short	-21734
+ 473 00c0 A66C     		.short	27814
+ 474 00c2 877C     		.short	31879
+ 475 00c4 E44C     		.short	19684
+ 476 00c6 C55C     		.short	23749
+ 477 00c8 222C     		.short	11298
+ 478 00ca 033C     		.short	15363
+ 479 00cc 600C     		.short	3168
+ 480 00ce 411C     		.short	7233
+ 481 00d0 AEED     		.short	-4690
+ 482 00d2 8FFD     		.short	-625
+ 483 00d4 ECCD     		.short	-12820
+ 484 00d6 CDDD     		.short	-8755
+ 485 00d8 2AAD     		.short	-21206
+ 486 00da 0BBD     		.short	-17141
+ 487 00dc 688D     		.short	-29336
+ 488 00de 499D     		.short	-25271
+ 489 00e0 977E     		.short	32407
+ARM GAS  /tmp/cczBGVhG.s 			page 12
+
+
+ 490 00e2 B66E     		.short	28342
+ 491 00e4 D55E     		.short	24277
+ 492 00e6 F44E     		.short	20212
+ 493 00e8 133E     		.short	15891
+ 494 00ea 322E     		.short	11826
+ 495 00ec 511E     		.short	7761
+ 496 00ee 700E     		.short	3696
+ 497 00f0 9FFF     		.short	-97
+ 498 00f2 BEEF     		.short	-4162
+ 499 00f4 DDDF     		.short	-8227
+ 500 00f6 FCCF     		.short	-12292
+ 501 00f8 1BBF     		.short	-16613
+ 502 00fa 3AAF     		.short	-20678
+ 503 00fc 599F     		.short	-24743
+ 504 00fe 788F     		.short	-28808
+ 505 0100 8891     		.short	-28280
+ 506 0102 A981     		.short	-32343
+ 507 0104 CAB1     		.short	-20022
+ 508 0106 EBA1     		.short	-24085
+ 509 0108 0CD1     		.short	-12020
+ 510 010a 2DC1     		.short	-16083
+ 511 010c 4EF1     		.short	-3762
+ 512 010e 6FE1     		.short	-7825
+ 513 0110 8010     		.short	4224
+ 514 0112 A100     		.short	161
+ 515 0114 C230     		.short	12482
+ 516 0116 E320     		.short	8419
+ 517 0118 0450     		.short	20484
+ 518 011a 2540     		.short	16421
+ 519 011c 4670     		.short	28742
+ 520 011e 6760     		.short	24679
+ 521 0120 B983     		.short	-31815
+ 522 0122 9893     		.short	-27752
+ 523 0124 FBA3     		.short	-23557
+ 524 0126 DAB3     		.short	-19494
+ 525 0128 3DC3     		.short	-15555
+ 526 012a 1CD3     		.short	-11492
+ 527 012c 7FE3     		.short	-7297
+ 528 012e 5EF3     		.short	-3234
+ 529 0130 B102     		.short	689
+ 530 0132 9012     		.short	4752
+ 531 0134 F322     		.short	8947
+ 532 0136 D232     		.short	13010
+ 533 0138 3542     		.short	16949
+ 534 013a 1452     		.short	21012
+ 535 013c 7762     		.short	25207
+ 536 013e 5672     		.short	29270
+ 537 0140 EAB5     		.short	-18966
+ 538 0142 CBA5     		.short	-23093
+ 539 0144 A895     		.short	-27224
+ 540 0146 8985     		.short	-31351
+ 541 0148 6EF5     		.short	-2706
+ 542 014a 4FE5     		.short	-6833
+ 543 014c 2CD5     		.short	-10964
+ 544 014e 0DC5     		.short	-15091
+ 545 0150 E234     		.short	13538
+ 546 0152 C324     		.short	9411
+ARM GAS  /tmp/cczBGVhG.s 			page 13
+
+
+ 547 0154 A014     		.short	5280
+ 548 0156 8104     		.short	1153
+ 549 0158 6674     		.short	29798
+ 550 015a 4764     		.short	25671
+ 551 015c 2454     		.short	21540
+ 552 015e 0544     		.short	17413
+ 553 0160 DBA7     		.short	-22565
+ 554 0162 FAB7     		.short	-18438
+ 555 0164 9987     		.short	-30823
+ 556 0166 B897     		.short	-26696
+ 557 0168 5FE7     		.short	-6305
+ 558 016a 7EF7     		.short	-2178
+ 559 016c 1DC7     		.short	-14563
+ 560 016e 3CD7     		.short	-10436
+ 561 0170 D326     		.short	9939
+ 562 0172 F236     		.short	14066
+ 563 0174 9106     		.short	1681
+ 564 0176 B016     		.short	5808
+ 565 0178 5766     		.short	26199
+ 566 017a 7676     		.short	30326
+ 567 017c 1546     		.short	17941
+ 568 017e 3456     		.short	22068
+ 569 0180 4CD9     		.short	-9908
+ 570 0182 6DC9     		.short	-13971
+ 571 0184 0EF9     		.short	-1778
+ 572 0186 2FE9     		.short	-5841
+ 573 0188 C899     		.short	-26168
+ 574 018a E989     		.short	-30231
+ 575 018c 8AB9     		.short	-18038
+ 576 018e ABA9     		.short	-22101
+ 577 0190 4458     		.short	22596
+ 578 0192 6548     		.short	18533
+ 579 0194 0678     		.short	30726
+ 580 0196 2768     		.short	26663
+ 581 0198 C018     		.short	6336
+ 582 019a E108     		.short	2273
+ 583 019c 8238     		.short	14466
+ 584 019e A328     		.short	10403
+ 585 01a0 7DCB     		.short	-13443
+ 586 01a2 5CDB     		.short	-9380
+ 587 01a4 3FEB     		.short	-5313
+ 588 01a6 1EFB     		.short	-1250
+ 589 01a8 F98B     		.short	-29703
+ 590 01aa D89B     		.short	-25640
+ 591 01ac BBAB     		.short	-21573
+ 592 01ae 9ABB     		.short	-17510
+ 593 01b0 754A     		.short	19061
+ 594 01b2 545A     		.short	23124
+ 595 01b4 376A     		.short	27191
+ 596 01b6 167A     		.short	31254
+ 597 01b8 F10A     		.short	2801
+ 598 01ba D01A     		.short	6864
+ 599 01bc B32A     		.short	10931
+ 600 01be 923A     		.short	14994
+ 601 01c0 2EFD     		.short	-722
+ 602 01c2 0FED     		.short	-4849
+ 603 01c4 6CDD     		.short	-8852
+ARM GAS  /tmp/cczBGVhG.s 			page 14
+
+
+ 604 01c6 4DCD     		.short	-12979
+ 605 01c8 AABD     		.short	-16982
+ 606 01ca 8BAD     		.short	-21109
+ 607 01cc E89D     		.short	-25112
+ 608 01ce C98D     		.short	-29239
+ 609 01d0 267C     		.short	31782
+ 610 01d2 076C     		.short	27655
+ 611 01d4 645C     		.short	23652
+ 612 01d6 454C     		.short	19525
+ 613 01d8 A23C     		.short	15522
+ 614 01da 832C     		.short	11395
+ 615 01dc E01C     		.short	7392
+ 616 01de C10C     		.short	3265
+ 617 01e0 1FEF     		.short	-4321
+ 618 01e2 3EFF     		.short	-194
+ 619 01e4 5DCF     		.short	-12451
+ 620 01e6 7CDF     		.short	-8324
+ 621 01e8 9BAF     		.short	-20581
+ 622 01ea BABF     		.short	-16454
+ 623 01ec D98F     		.short	-28711
+ 624 01ee F89F     		.short	-24584
+ 625 01f0 176E     		.short	28183
+ 626 01f2 367E     		.short	32310
+ 627 01f4 554E     		.short	20053
+ 628 01f6 745E     		.short	24180
+ 629 01f8 932E     		.short	11923
+ 630 01fa B23E     		.short	16050
+ 631 01fc D10E     		.short	3793
+ 632 01fe F01E     		.short	7920
+ 633              		.section	.bss.index.6986,"aw",%nobits
+ 634              		.align	2
+ 635              		.set	.LANCHOR4,. + 0
+ 638              	index.6986:
+ 639 0000 00000000 		.space	4
+ 640              		.text
+ 641              	.Letext0:
+ 642              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 643              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 644              		.file 4 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 645              		.file 5 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 646              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 647              		.file 7 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h"
+ 648              		.file 8 "Inc/ahrsEXT.h"
+ 649              		.file 9 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 650              		.file 10 "Inc/handles.h"
+ 651              		.file 11 "Inc/main.h"
+ARM GAS  /tmp/cczBGVhG.s 			page 15
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 ahrsEXT.c
+     /tmp/cczBGVhG.s:19     .text.ahrsInit:0000000000000000 $t
+     /tmp/cczBGVhG.s:24     .text.ahrsInit:0000000000000000 ahrsInit
+     /tmp/cczBGVhG.s:42     .text.ahrsInit:000000000000000c $d
+     /tmp/cczBGVhG.s:48     .text.getLastAhrs:0000000000000000 $t
+     /tmp/cczBGVhG.s:53     .text.getLastAhrs:0000000000000000 getLastAhrs
+     /tmp/cczBGVhG.s:100    .text.getLastAhrs:0000000000000024 $d
+     /tmp/cczBGVhG.s:106    .text.HAL_UART_RxCpltCallback:0000000000000000 $t
+     /tmp/cczBGVhG.s:111    .text.HAL_UART_RxCpltCallback:0000000000000000 HAL_UART_RxCpltCallback
+     /tmp/cczBGVhG.s:321    .text.HAL_UART_RxCpltCallback:00000000000000d8 $d
+     /tmp/cczBGVhG.s:335    .bss.receiveBuffer:0000000000000000 $d
+     /tmp/cczBGVhG.s:339    .bss.receiveBuffer:0000000000000000 receiveBuffer
+     /tmp/cczBGVhG.s:345    .bss.interruptCounter:0000000000000000 interruptCounter
+     /tmp/cczBGVhG.s:346    .bss.interruptCounter:0000000000000000 $d
+     /tmp/cczBGVhG.s:348    .bss.last:0000000000000000 $d
+     /tmp/cczBGVhG.s:352    .bss.last:0000000000000000 last
+     /tmp/cczBGVhG.s:358    .bss.uartBuffer:0000000000000000 uartBuffer
+     /tmp/cczBGVhG.s:359    .bss.uartBuffer:0000000000000000 $d
+     /tmp/cczBGVhG.s:361    .rodata.str1.4:0000000000000000 $d
+     /tmp/cczBGVhG.s:365    .bss.received:0000000000000000 $d
+     /tmp/cczBGVhG.s:369    .bss.received:0000000000000000 received
+     /tmp/cczBGVhG.s:372    .rodata.crc16Tab:0000000000000000 $d
+     /tmp/cczBGVhG.s:376    .rodata.crc16Tab:0000000000000000 crc16Tab
+     /tmp/cczBGVhG.s:634    .bss.index.6986:0000000000000000 $d
+     /tmp/cczBGVhG.s:638    .bss.index.6986:0000000000000000 index.6986
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+HAL_UART_Receive_IT
+uart3Handle
+_Error_Handler

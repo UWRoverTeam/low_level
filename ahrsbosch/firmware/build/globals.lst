@@ -1,0 +1,218 @@
+ARM GAS  /tmp/ccmxdqdt.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 2
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"globals.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.led,"ax",%progbits
+  19              		.align	2
+  20              		.global	led
+  21              		.thumb
+  22              		.thumb_func
+  24              	led:
+  25              	.LFB63:
+  26              		.file 1 "Src/globals.c"
+   1:Src/globals.c **** #include "globals.h"
+   2:Src/globals.c **** 
+   3:Src/globals.c **** CAN_HandleTypeDef *can1Handle;
+   4:Src/globals.c **** CAN_HandleTypeDef *can2Handle;
+   5:Src/globals.c **** 
+   6:Src/globals.c **** void led(uint8_t n, uint8_t state)
+   7:Src/globals.c **** {
+  27              		.loc 1 7 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+  32              	.LVL0:
+   8:Src/globals.c **** 	if (n == 1)
+  33              		.loc 1 8 0
+  34 0000 0128     		cmp	r0, #1
+  35 0002 0CD0     		beq	.L6
+   9:Src/globals.c **** 		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, !state);
+  10:Src/globals.c **** 	else if (n == 2)
+  36              		.loc 1 10 0
+  37 0004 0228     		cmp	r0, #2
+  38 0006 11D0     		beq	.L7
+  11:Src/globals.c **** 		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, !state);
+  12:Src/globals.c **** 	else if (n == 3)
+  39              		.loc 1 12 0
+  40 0008 0328     		cmp	r0, #3
+  41 000a 00D0     		beq	.L8
+  42 000c 7047     		bx	lr
+  43              	.L8:
+  13:Src/globals.c **** 		HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, !state);
+  44              		.loc 1 13 0
+  45 000e B1FA81F2 		clz	r2, r1
+ARM GAS  /tmp/ccmxdqdt.s 			page 2
+
+
+  46 0012 0A48     		ldr	r0, .L9
+  47              	.LVL1:
+  48 0014 5209     		lsrs	r2, r2, #5
+  49 0016 4FF48071 		mov	r1, #256
+  50              	.LVL2:
+  51 001a FFF7FEBF 		b	HAL_GPIO_WritePin
+  52              	.LVL3:
+  53              	.L6:
+   9:Src/globals.c **** 		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, !state);
+  54              		.loc 1 9 0
+  55 001e B1FA81F2 		clz	r2, r1
+  56 0022 0648     		ldr	r0, .L9
+  57              	.LVL4:
+  58 0024 5209     		lsrs	r2, r2, #5
+  59 0026 4021     		movs	r1, #64
+  60              	.LVL5:
+  61 0028 FFF7FEBF 		b	HAL_GPIO_WritePin
+  62              	.LVL6:
+  63              	.L7:
+  64              	.LBB4:
+  65              	.LBB5:
+  11:Src/globals.c **** 		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, !state);
+  66              		.loc 1 11 0
+  67 002c B1FA81F2 		clz	r2, r1
+  68 0030 0248     		ldr	r0, .L9
+  69              	.LVL7:
+  70 0032 5209     		lsrs	r2, r2, #5
+  71 0034 8021     		movs	r1, #128
+  72              	.LVL8:
+  73 0036 FFF7FEBF 		b	HAL_GPIO_WritePin
+  74              	.LVL9:
+  75              	.L10:
+  76 003a 00BF     		.align	2
+  77              	.L9:
+  78 003c 00100140 		.word	1073811456
+  79              	.LBE5:
+  80              	.LBE4:
+  81              		.cfi_endproc
+  82              	.LFE63:
+  84              		.section	.text.blink,"ax",%progbits
+  85              		.align	2
+  86              		.global	blink
+  87              		.thumb
+  88              		.thumb_func
+  90              	blink:
+  91              	.LFB64:
+  14:Src/globals.c **** }
+  15:Src/globals.c **** 
+  16:Src/globals.c **** void blink(uint8_t l, int n)
+  17:Src/globals.c **** {
+  92              		.loc 1 17 0
+  93              		.cfi_startproc
+  94              		@ args = 0, pretend = 0, frame = 0
+  95              		@ frame_needed = 0, uses_anonymous_args = 0
+  96              	.LVL10:
+  97              	.LBB6:
+  18:Src/globals.c **** 	for (int i = 0; i < n; ++i) {
+ARM GAS  /tmp/ccmxdqdt.s 			page 3
+
+
+  98              		.loc 1 18 0
+  99 0000 0029     		cmp	r1, #0
+ 100 0002 15DD     		ble	.L17
+ 101              	.LBE6:
+  17:Src/globals.c **** 	for (int i = 0; i < n; ++i) {
+ 102              		.loc 1 17 0
+ 103 0004 70B5     		push	{r4, r5, r6, lr}
+ 104              	.LCFI0:
+ 105              		.cfi_def_cfa_offset 16
+ 106              		.cfi_offset 4, -16
+ 107              		.cfi_offset 5, -12
+ 108              		.cfi_offset 6, -8
+ 109              		.cfi_offset 14, -4
+ 110 0006 0E46     		mov	r6, r1
+ 111 0008 0546     		mov	r5, r0
+ 112              	.LBB7:
+ 113              		.loc 1 18 0
+ 114 000a 0024     		movs	r4, #0
+ 115              	.LVL11:
+ 116              	.L12:
+  19:Src/globals.c **** 		led(l, 1);
+ 117              		.loc 1 19 0 discriminator 3
+ 118 000c 0121     		movs	r1, #1
+ 119 000e 2846     		mov	r0, r5
+ 120 0010 FFF7FEFF 		bl	led
+ 121              	.LVL12:
+  20:Src/globals.c **** 		HAL_Delay(20);
+ 122              		.loc 1 20 0 discriminator 3
+ 123 0014 1420     		movs	r0, #20
+ 124 0016 FFF7FEFF 		bl	HAL_Delay
+ 125              	.LVL13:
+  21:Src/globals.c **** 		led(l, 0);
+ 126              		.loc 1 21 0 discriminator 3
+ 127 001a 2846     		mov	r0, r5
+ 128 001c 0021     		movs	r1, #0
+ 129 001e FFF7FEFF 		bl	led
+ 130              	.LVL14:
+  18:Src/globals.c **** 		led(l, 1);
+ 131              		.loc 1 18 0 discriminator 3
+ 132 0022 0134     		adds	r4, r4, #1
+ 133              	.LVL15:
+  22:Src/globals.c **** 		HAL_Delay(200);
+ 134              		.loc 1 22 0 discriminator 3
+ 135 0024 C820     		movs	r0, #200
+ 136 0026 FFF7FEFF 		bl	HAL_Delay
+ 137              	.LVL16:
+  18:Src/globals.c **** 		led(l, 1);
+ 138              		.loc 1 18 0 discriminator 3
+ 139 002a B442     		cmp	r4, r6
+ 140 002c EED1     		bne	.L12
+ 141 002e 70BD     		pop	{r4, r5, r6, pc}
+ 142              	.LVL17:
+ 143              	.L17:
+ 144              	.LCFI1:
+ 145              		.cfi_def_cfa_offset 0
+ 146              		.cfi_restore 4
+ 147              		.cfi_restore 5
+ARM GAS  /tmp/ccmxdqdt.s 			page 4
+
+
+ 148              		.cfi_restore 6
+ 149              		.cfi_restore 14
+ 150 0030 7047     		bx	lr
+ 151              	.LBE7:
+ 152              		.cfi_endproc
+ 153              	.LFE64:
+ 155              		.comm	can2Handle,4,4
+ 156              		.comm	can1Handle,4,4
+ 157 0032 00BF     		.text
+ 158              	.Letext0:
+ 159              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 160              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 161              		.file 4 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 162              		.file 5 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 163              		.file 6 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_gpio.h"
+ 164              		.file 7 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_can.h"
+ 165              		.file 8 "Drivers/CMSIS/Include/core_cm3.h"
+ 166              		.file 9 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ARM GAS  /tmp/ccmxdqdt.s 			page 5
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 globals.c
+     /tmp/ccmxdqdt.s:19     .text.led:0000000000000000 $t
+     /tmp/ccmxdqdt.s:24     .text.led:0000000000000000 led
+     /tmp/ccmxdqdt.s:78     .text.led:000000000000003c $d
+     /tmp/ccmxdqdt.s:85     .text.blink:0000000000000000 $t
+     /tmp/ccmxdqdt.s:90     .text.blink:0000000000000000 blink
+                            *COM*:0000000000000004 can2Handle
+                            *COM*:0000000000000004 can1Handle
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+HAL_GPIO_WritePin
+HAL_Delay

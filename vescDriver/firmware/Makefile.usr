@@ -1,0 +1,9 @@
+#not complete Makefile, meant to be included
+
+USR_SOURCES += \
+Src/handles.c \
+Src/vesc.c \
+Src/usrMain.c
+
+
+USR_CFLAGS += -std=c11

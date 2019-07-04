@@ -1,0 +1,1798 @@
+ARM GAS  /tmp/ccoTQmNc.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"can.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.setupFilters1Canteros,"ax",%progbits
+  19              		.align	2
+  20              		.thumb
+  21              		.thumb_func
+  23              	setupFilters1Canteros:
+  24              	.LFB69:
+  25              		.file 1 "../../shared/firmware/Src/can.c"
+   1:../../shared/firmware/Src/can.c **** #include "can.h"
+   2:../../shared/firmware/Src/can.c **** 
+   3:../../shared/firmware/Src/can.c **** static uint8_t ADDRESSES_SIZE;
+   4:../../shared/firmware/Src/can.c **** static const uint16_t* myAddresses;
+   5:../../shared/firmware/Src/can.c **** 
+   6:../../shared/firmware/Src/can.c **** uint32_t lastCanError = HAL_CAN_ERROR_NONE;
+   7:../../shared/firmware/Src/can.c **** 
+   8:../../shared/firmware/Src/can.c **** #define CAN_MESSAGE_QUEUE_SIZE 16
+   9:../../shared/firmware/Src/can.c **** typedef struct {
+  10:../../shared/firmware/Src/can.c **** 	uint8_t head, tail;
+  11:../../shared/firmware/Src/can.c **** 	CanMessage messages[CAN_MESSAGE_QUEUE_SIZE];
+  12:../../shared/firmware/Src/can.c **** } CanMessageQueue;
+  13:../../shared/firmware/Src/can.c **** volatile static CanMessageQueue queue1, queue2;
+  14:../../shared/firmware/Src/can.c **** 
+  15:../../shared/firmware/Src/can.c **** //HAL callbacks
+  16:../../shared/firmware/Src/can.c **** void HAL_CAN_TxCpltCallback(CAN_HandleTypeDef* hcan)
+  17:../../shared/firmware/Src/can.c **** {
+  18:../../shared/firmware/Src/can.c **** // 	led(1,1);
+  19:../../shared/firmware/Src/can.c **** }
+  20:../../shared/firmware/Src/can.c **** 
+  21:../../shared/firmware/Src/can.c **** void HAL_CAN_RxCpltCallback(CAN_HandleTypeDef* hcan)
+  22:../../shared/firmware/Src/can.c **** {
+  23:../../shared/firmware/Src/can.c **** // 	led(2,1);
+  24:../../shared/firmware/Src/can.c **** 
+  25:../../shared/firmware/Src/can.c **** 	volatile CanMessageQueue* q = (hcan == can1Handle) ? &queue1 : &queue2;
+  26:../../shared/firmware/Src/can.c **** 
+  27:../../shared/firmware/Src/can.c **** 	q->messages[q->tail].id = hcan->pRxMsg->StdId;
+  28:../../shared/firmware/Src/can.c **** 	uint8_t bytes = hcan->pRxMsg->DLC;
+  29:../../shared/firmware/Src/can.c **** 	q->messages[q->tail].dlc = bytes;
+  30:../../shared/firmware/Src/can.c **** 	for (int i = 0; i < bytes; ++i)
+  31:../../shared/firmware/Src/can.c **** 		q->messages[q->tail].data[i] = hcan->pRxMsg->Data[i];
+  32:../../shared/firmware/Src/can.c **** 
+  33:../../shared/firmware/Src/can.c **** 	++(q->tail);
+ARM GAS  /tmp/ccoTQmNc.s 			page 2
+
+
+  34:../../shared/firmware/Src/can.c **** 	q->tail %= CAN_MESSAGE_QUEUE_SIZE;
+  35:../../shared/firmware/Src/can.c **** 
+  36:../../shared/firmware/Src/can.c **** 	if (HAL_CAN_Receive_IT(hcan, CAN_FIFO0) != HAL_OK)
+  37:../../shared/firmware/Src/can.c **** 		led(2, 1);
+  38:../../shared/firmware/Src/can.c **** }
+  39:../../shared/firmware/Src/can.c **** 
+  40:../../shared/firmware/Src/can.c **** void HAL_CAN_ErrorCallback(CAN_HandleTypeDef *hcan)
+  41:../../shared/firmware/Src/can.c **** {
+  42:../../shared/firmware/Src/can.c **** 	lastCanError = hcan->ErrorCode;
+  43:../../shared/firmware/Src/can.c **** 	if (HAL_CAN_Receive_IT(hcan, CAN_FIFO0) != HAL_OK)
+  44:../../shared/firmware/Src/can.c **** 		led(3,1);
+  45:../../shared/firmware/Src/can.c **** // 	_Error_Handler(__FILE__,__LINE__);
+  46:../../shared/firmware/Src/can.c **** }
+  47:../../shared/firmware/Src/can.c **** 
+  48:../../shared/firmware/Src/can.c **** static void disableRX0Int(CAN_HandleTypeDef *hcan)
+  49:../../shared/firmware/Src/can.c **** {
+  50:../../shared/firmware/Src/can.c **** 	HAL_NVIC_DisableIRQ((hcan == can1Handle) ? CAN1_RX0_IRQn : CAN2_RX0_IRQn);
+  51:../../shared/firmware/Src/can.c **** 	__NOP(); //maybe this is not needed, but eh
+  52:../../shared/firmware/Src/can.c **** }
+  53:../../shared/firmware/Src/can.c **** static void enableRX0Int(CAN_HandleTypeDef *hcan)
+  54:../../shared/firmware/Src/can.c **** {
+  55:../../shared/firmware/Src/can.c **** 	HAL_NVIC_EnableIRQ((hcan == can1Handle) ? CAN1_RX0_IRQn : CAN2_RX0_IRQn);
+  56:../../shared/firmware/Src/can.c **** }
+  57:../../shared/firmware/Src/can.c **** 
+  58:../../shared/firmware/Src/can.c **** static inline uint16_t shiftToLeft(uint16_t data)
+  59:../../shared/firmware/Src/can.c **** {
+  60:../../shared/firmware/Src/can.c **** 	return (data << 5);
+  61:../../shared/firmware/Src/can.c **** }
+  62:../../shared/firmware/Src/can.c **** 
+  63:../../shared/firmware/Src/can.c **** static void setupFilters1Canteros()
+  64:../../shared/firmware/Src/can.c **** {
+  26              		.loc 1 64 0
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 40
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30 0000 00B5     		push	{lr}
+  31              	.LCFI0:
+  32              		.cfi_def_cfa_offset 4
+  33              		.cfi_offset 14, -4
+  34 0002 8BB0     		sub	sp, sp, #44
+  35              	.LCFI1:
+  36              		.cfi_def_cfa_offset 48
+  65:../../shared/firmware/Src/can.c **** 	//cant have more than 4 (i'm lazy and don't want to configure more than 1 bank)
+  66:../../shared/firmware/Src/can.c **** 	if (ADDRESSES_SIZE > 4)
+  37              		.loc 1 66 0
+  38 0004 1C4B     		ldr	r3, .L10
+  39 0006 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+  40 0008 042B     		cmp	r3, #4
+  41 000a 03D9     		bls	.L2
+  67:../../shared/firmware/Src/can.c **** 		_Error_Handler(__FILE__,__LINE__);
+  42              		.loc 1 67 0
+  43 000c 1B48     		ldr	r0, .L10+4
+  44 000e 4321     		movs	r1, #67
+  45 0010 FFF7FEFF 		bl	_Error_Handler
+  46              	.LVL0:
+  47              	.L2:
+  68:../../shared/firmware/Src/can.c **** 	if (ADDRESSES_SIZE == 0) //no addresses means reject everything
+ARM GAS  /tmp/ccoTQmNc.s 			page 3
+
+
+  48              		.loc 1 68 0
+  49 0014 184B     		ldr	r3, .L10
+  50 0016 1A78     		ldrb	r2, [r3]	@ zero_extendqisi2
+  51 0018 002A     		cmp	r2, #0
+  52 001a 2AD0     		beq	.L1
+  69:../../shared/firmware/Src/can.c **** 		return;
+  70:../../shared/firmware/Src/can.c **** 
+  71:../../shared/firmware/Src/can.c **** 	CAN_FilterConfTypeDef config;
+  72:../../shared/firmware/Src/can.c **** 	config.FilterNumber = 0;
+  53              		.loc 1 72 0
+  54 001c 0023     		movs	r3, #0
+  55 001e 0593     		str	r3, [sp, #20]
+  73:../../shared/firmware/Src/can.c **** 	config.FilterMode = CAN_FILTERMODE_IDLIST;
+  56              		.loc 1 73 0
+  57 0020 0121     		movs	r1, #1
+  58 0022 0691     		str	r1, [sp, #24]
+  74:../../shared/firmware/Src/can.c **** 	config.FilterScale = CAN_FILTERSCALE_16BIT;
+  59              		.loc 1 74 0
+  60 0024 0793     		str	r3, [sp, #28]
+  75:../../shared/firmware/Src/can.c **** 	config.FilterFIFOAssignment = 0;
+  61              		.loc 1 75 0
+  62 0026 0493     		str	r3, [sp, #16]
+  76:../../shared/firmware/Src/can.c **** 	config.FilterActivation = ENABLE;
+  63              		.loc 1 76 0
+  64 0028 0891     		str	r1, [sp, #32]
+  77:../../shared/firmware/Src/can.c **** 	config.BankNumber = 14;
+  65              		.loc 1 77 0
+  66 002a 0E23     		movs	r3, #14
+  67 002c 0993     		str	r3, [sp, #36]
+  78:../../shared/firmware/Src/can.c **** 
+  79:../../shared/firmware/Src/can.c **** 	//we always set 4 filters, if we have less addresses, end filters will be duplicated
+  80:../../shared/firmware/Src/can.c **** 	uint16_t nextAddr = shiftToLeft(myAddresses[0]);
+  68              		.loc 1 80 0
+  69 002e 144B     		ldr	r3, .L10+8
+  70 0030 1968     		ldr	r1, [r3]
+  71 0032 0B88     		ldrh	r3, [r1]
+  72              	.LVL1:
+  73              	.LBB12:
+  74              	.LBB13:
+  60:../../shared/firmware/Src/can.c **** }
+  75              		.loc 1 60 0
+  76 0034 5B01     		lsls	r3, r3, #5
+  77              	.LVL2:
+  78 0036 9BB2     		uxth	r3, r3
+  79              	.LBE13:
+  80              	.LBE12:
+  81:../../shared/firmware/Src/can.c **** 	config.FilterIdHigh = nextAddr;
+  81              		.loc 1 81 0
+  82 0038 0093     		str	r3, [sp]
+  83              	.LVL3:
+  82:../../shared/firmware/Src/can.c **** 
+  83:../../shared/firmware/Src/can.c **** 	if (ADDRESSES_SIZE > 1)
+  84              		.loc 1 83 0
+  85 003a 012A     		cmp	r2, #1
+  86 003c 02D9     		bls	.L4
+  84:../../shared/firmware/Src/can.c **** 		nextAddr = shiftToLeft(myAddresses[1]);
+  87              		.loc 1 84 0
+ARM GAS  /tmp/ccoTQmNc.s 			page 4
+
+
+  88 003e 4B88     		ldrh	r3, [r1, #2]
+  89              	.LVL4:
+  90              	.LBB14:
+  91              	.LBB15:
+  60:../../shared/firmware/Src/can.c **** }
+  92              		.loc 1 60 0
+  93 0040 5B01     		lsls	r3, r3, #5
+  94              	.LVL5:
+  95 0042 9BB2     		uxth	r3, r3
+  96              	.LVL6:
+  97              	.L4:
+  98              	.LBE15:
+  99              	.LBE14:
+  85:../../shared/firmware/Src/can.c **** 	config.FilterIdLow = nextAddr;
+ 100              		.loc 1 85 0
+ 101 0044 0193     		str	r3, [sp, #4]
+  86:../../shared/firmware/Src/can.c **** 
+  87:../../shared/firmware/Src/can.c **** 	if (ADDRESSES_SIZE > 2)
+ 102              		.loc 1 87 0
+ 103 0046 022A     		cmp	r2, #2
+ 104 0048 02D9     		bls	.L5
+  88:../../shared/firmware/Src/can.c **** 		nextAddr = shiftToLeft(myAddresses[2]);
+ 105              		.loc 1 88 0
+ 106 004a 8B88     		ldrh	r3, [r1, #4]
+ 107              	.LVL7:
+ 108              	.LBB16:
+ 109              	.LBB17:
+  60:../../shared/firmware/Src/can.c **** }
+ 110              		.loc 1 60 0
+ 111 004c 5B01     		lsls	r3, r3, #5
+ 112              	.LVL8:
+ 113 004e 9BB2     		uxth	r3, r3
+ 114              	.LVL9:
+ 115              	.L5:
+ 116              	.LBE17:
+ 117              	.LBE16:
+  89:../../shared/firmware/Src/can.c **** 	config.FilterMaskIdHigh = nextAddr;
+ 118              		.loc 1 89 0
+ 119 0050 0293     		str	r3, [sp, #8]
+  90:../../shared/firmware/Src/can.c **** 
+  91:../../shared/firmware/Src/can.c **** 	if (ADDRESSES_SIZE > 3)
+ 120              		.loc 1 91 0
+ 121 0052 032A     		cmp	r2, #3
+ 122 0054 02D9     		bls	.L6
+  92:../../shared/firmware/Src/can.c **** 		nextAddr = shiftToLeft(myAddresses[3]);
+ 123              		.loc 1 92 0
+ 124 0056 CB88     		ldrh	r3, [r1, #6]
+ 125              	.LVL10:
+ 126              	.LBB18:
+ 127              	.LBB19:
+  60:../../shared/firmware/Src/can.c **** }
+ 128              		.loc 1 60 0
+ 129 0058 5B01     		lsls	r3, r3, #5
+ 130              	.LVL11:
+ 131 005a 9BB2     		uxth	r3, r3
+ 132              	.LVL12:
+ 133              	.L6:
+ARM GAS  /tmp/ccoTQmNc.s 			page 5
+
+
+ 134              	.LBE19:
+ 135              	.LBE18:
+  93:../../shared/firmware/Src/can.c **** 	config.FilterMaskIdLow = nextAddr;
+ 136              		.loc 1 93 0
+ 137 005c 0393     		str	r3, [sp, #12]
+  94:../../shared/firmware/Src/can.c **** 
+  95:../../shared/firmware/Src/can.c **** 	if (HAL_CAN_ConfigFilter(can1Handle, &config) != HAL_OK)
+ 138              		.loc 1 95 0
+ 139 005e 094B     		ldr	r3, .L10+12
+ 140              	.LVL13:
+ 141 0060 1868     		ldr	r0, [r3]
+ 142 0062 6946     		mov	r1, sp
+ 143 0064 FFF7FEFF 		bl	HAL_CAN_ConfigFilter
+ 144              	.LVL14:
+ 145 0068 18B1     		cbz	r0, .L1
+  96:../../shared/firmware/Src/can.c **** 		_Error_Handler(__FILE__,__LINE__);
+ 146              		.loc 1 96 0
+ 147 006a 0448     		ldr	r0, .L10+4
+ 148 006c 6021     		movs	r1, #96
+ 149 006e FFF7FEFF 		bl	_Error_Handler
+ 150              	.LVL15:
+ 151              	.L1:
+  97:../../shared/firmware/Src/can.c **** }
+ 152              		.loc 1 97 0
+ 153 0072 0BB0     		add	sp, sp, #44
+ 154              	.LCFI2:
+ 155              		.cfi_def_cfa_offset 4
+ 156              		@ sp needed
+ 157 0074 5DF804FB 		ldr	pc, [sp], #4
+ 158              	.L11:
+ 159              		.align	2
+ 160              	.L10:
+ 161 0078 00000000 		.word	.LANCHOR0
+ 162 007c 00000000 		.word	.LC0
+ 163 0080 00000000 		.word	.LANCHOR1
+ 164 0084 00000000 		.word	can1Handle
+ 165              		.cfi_endproc
+ 166              	.LFE69:
+ 168              		.section	.text.setupFilters1Accept,"ax",%progbits
+ 169              		.align	2
+ 170              		.thumb
+ 171              		.thumb_func
+ 173              	setupFilters1Accept:
+ 174              	.LFB70:
+  98:../../shared/firmware/Src/can.c **** 
+  99:../../shared/firmware/Src/can.c **** static void setupFilters1Accept()
+ 100:../../shared/firmware/Src/can.c **** {
+ 175              		.loc 1 100 0
+ 176              		.cfi_startproc
+ 177              		@ args = 0, pretend = 0, frame = 40
+ 178              		@ frame_needed = 0, uses_anonymous_args = 0
+ 179 0000 00B5     		push	{lr}
+ 180              	.LCFI3:
+ 181              		.cfi_def_cfa_offset 4
+ 182              		.cfi_offset 14, -4
+ 183 0002 8BB0     		sub	sp, sp, #44
+ 184              	.LCFI4:
+ARM GAS  /tmp/ccoTQmNc.s 			page 6
+
+
+ 185              		.cfi_def_cfa_offset 48
+ 101:../../shared/firmware/Src/can.c **** 	CAN_FilterConfTypeDef config;
+ 102:../../shared/firmware/Src/can.c **** 	config.FilterNumber = 0;
+ 186              		.loc 1 102 0
+ 187 0004 0023     		movs	r3, #0
+ 188 0006 0593     		str	r3, [sp, #20]
+ 103:../../shared/firmware/Src/can.c **** 	config.FilterMode = CAN_FILTERMODE_IDMASK;
+ 189              		.loc 1 103 0
+ 190 0008 0693     		str	r3, [sp, #24]
+ 104:../../shared/firmware/Src/can.c **** 	config.FilterScale = CAN_FILTERSCALE_32BIT;
+ 191              		.loc 1 104 0
+ 192 000a 0122     		movs	r2, #1
+ 193 000c 0792     		str	r2, [sp, #28]
+ 105:../../shared/firmware/Src/can.c **** 	config.FilterIdHigh = 0x0000;
+ 194              		.loc 1 105 0
+ 195 000e 0093     		str	r3, [sp]
+ 106:../../shared/firmware/Src/can.c **** 	config.FilterIdLow = 0x0000;
+ 196              		.loc 1 106 0
+ 197 0010 0193     		str	r3, [sp, #4]
+ 107:../../shared/firmware/Src/can.c **** 	config.FilterMaskIdHigh = 0x0000;
+ 198              		.loc 1 107 0
+ 199 0012 0293     		str	r3, [sp, #8]
+ 108:../../shared/firmware/Src/can.c **** 	config.FilterMaskIdLow = 0x0000;
+ 200              		.loc 1 108 0
+ 201 0014 0393     		str	r3, [sp, #12]
+ 109:../../shared/firmware/Src/can.c **** 	config.FilterFIFOAssignment = 0;
+ 202              		.loc 1 109 0
+ 203 0016 0493     		str	r3, [sp, #16]
+ 110:../../shared/firmware/Src/can.c **** 	config.FilterActivation = ENABLE;
+ 204              		.loc 1 110 0
+ 205 0018 0892     		str	r2, [sp, #32]
+ 111:../../shared/firmware/Src/can.c **** 	config.BankNumber = 14;
+ 206              		.loc 1 111 0
+ 207 001a 0E23     		movs	r3, #14
+ 208 001c 0993     		str	r3, [sp, #36]
+ 112:../../shared/firmware/Src/can.c **** 	if (HAL_CAN_ConfigFilter(can1Handle, &config) != HAL_OK) {
+ 209              		.loc 1 112 0
+ 210 001e 064B     		ldr	r3, .L15
+ 211 0020 1868     		ldr	r0, [r3]
+ 212 0022 6946     		mov	r1, sp
+ 213 0024 FFF7FEFF 		bl	HAL_CAN_ConfigFilter
+ 214              	.LVL16:
+ 215 0028 18B1     		cbz	r0, .L12
+ 113:../../shared/firmware/Src/can.c **** 		_Error_Handler(__FILE__,__LINE__);
+ 216              		.loc 1 113 0
+ 217 002a 0448     		ldr	r0, .L15+4
+ 218 002c 7121     		movs	r1, #113
+ 219 002e FFF7FEFF 		bl	_Error_Handler
+ 220              	.LVL17:
+ 221              	.L12:
+ 114:../../shared/firmware/Src/can.c **** 	}
+ 115:../../shared/firmware/Src/can.c **** }
+ 222              		.loc 1 115 0
+ 223 0032 0BB0     		add	sp, sp, #44
+ 224              	.LCFI5:
+ 225              		.cfi_def_cfa_offset 4
+ 226              		@ sp needed
+ARM GAS  /tmp/ccoTQmNc.s 			page 7
+
+
+ 227 0034 5DF804FB 		ldr	pc, [sp], #4
+ 228              	.L16:
+ 229              		.align	2
+ 230              	.L15:
+ 231 0038 00000000 		.word	can1Handle
+ 232 003c 00000000 		.word	.LC0
+ 233              		.cfi_endproc
+ 234              	.LFE70:
+ 236              		.section	.text.setupFilters2Accept,"ax",%progbits
+ 237              		.align	2
+ 238              		.thumb
+ 239              		.thumb_func
+ 241              	setupFilters2Accept:
+ 242              	.LFB71:
+ 116:../../shared/firmware/Src/can.c **** 
+ 117:../../shared/firmware/Src/can.c **** static void setupFilters2Accept()
+ 118:../../shared/firmware/Src/can.c **** {
+ 243              		.loc 1 118 0
+ 244              		.cfi_startproc
+ 245              		@ args = 0, pretend = 0, frame = 40
+ 246              		@ frame_needed = 0, uses_anonymous_args = 0
+ 247 0000 00B5     		push	{lr}
+ 248              	.LCFI6:
+ 249              		.cfi_def_cfa_offset 4
+ 250              		.cfi_offset 14, -4
+ 251 0002 8BB0     		sub	sp, sp, #44
+ 252              	.LCFI7:
+ 253              		.cfi_def_cfa_offset 48
+ 119:../../shared/firmware/Src/can.c **** 	CAN_FilterConfTypeDef config;
+ 120:../../shared/firmware/Src/can.c **** 	config.FilterNumber = 14;
+ 254              		.loc 1 120 0
+ 255 0004 0E22     		movs	r2, #14
+ 256 0006 0592     		str	r2, [sp, #20]
+ 121:../../shared/firmware/Src/can.c **** 	config.FilterMode = CAN_FILTERMODE_IDMASK;
+ 257              		.loc 1 121 0
+ 258 0008 0023     		movs	r3, #0
+ 259 000a 0693     		str	r3, [sp, #24]
+ 122:../../shared/firmware/Src/can.c **** 	config.FilterScale = CAN_FILTERSCALE_32BIT;
+ 260              		.loc 1 122 0
+ 261 000c 0121     		movs	r1, #1
+ 262 000e 0791     		str	r1, [sp, #28]
+ 123:../../shared/firmware/Src/can.c **** 	config.FilterIdHigh = 0x0000;
+ 263              		.loc 1 123 0
+ 264 0010 0093     		str	r3, [sp]
+ 124:../../shared/firmware/Src/can.c **** 	config.FilterIdLow = 0x0000;
+ 265              		.loc 1 124 0
+ 266 0012 0193     		str	r3, [sp, #4]
+ 125:../../shared/firmware/Src/can.c **** 	config.FilterMaskIdHigh = 0x0000;
+ 267              		.loc 1 125 0
+ 268 0014 0293     		str	r3, [sp, #8]
+ 126:../../shared/firmware/Src/can.c **** 	config.FilterMaskIdLow = 0x0000;
+ 269              		.loc 1 126 0
+ 270 0016 0393     		str	r3, [sp, #12]
+ 127:../../shared/firmware/Src/can.c **** 	config.FilterFIFOAssignment = 0;
+ 271              		.loc 1 127 0
+ 272 0018 0493     		str	r3, [sp, #16]
+ 128:../../shared/firmware/Src/can.c **** 	config.FilterActivation = ENABLE;
+ARM GAS  /tmp/ccoTQmNc.s 			page 8
+
+
+ 273              		.loc 1 128 0
+ 274 001a 0891     		str	r1, [sp, #32]
+ 129:../../shared/firmware/Src/can.c **** 	config.BankNumber = 14;
+ 275              		.loc 1 129 0
+ 276 001c 0992     		str	r2, [sp, #36]
+ 130:../../shared/firmware/Src/can.c **** 	//filter for CAN2 is managed by CAN1, number must be in slave filers
+ 131:../../shared/firmware/Src/can.c **** 	if (HAL_CAN_ConfigFilter(can1Handle, &config) != HAL_OK) {
+ 277              		.loc 1 131 0
+ 278 001e 064B     		ldr	r3, .L20
+ 279 0020 1868     		ldr	r0, [r3]
+ 280 0022 6946     		mov	r1, sp
+ 281 0024 FFF7FEFF 		bl	HAL_CAN_ConfigFilter
+ 282              	.LVL18:
+ 283 0028 18B1     		cbz	r0, .L17
+ 132:../../shared/firmware/Src/can.c **** 		_Error_Handler(__FILE__,__LINE__);
+ 284              		.loc 1 132 0
+ 285 002a 0448     		ldr	r0, .L20+4
+ 286 002c 8421     		movs	r1, #132
+ 287 002e FFF7FEFF 		bl	_Error_Handler
+ 288              	.LVL19:
+ 289              	.L17:
+ 133:../../shared/firmware/Src/can.c **** 	}
+ 134:../../shared/firmware/Src/can.c **** }
+ 290              		.loc 1 134 0
+ 291 0032 0BB0     		add	sp, sp, #44
+ 292              	.LCFI8:
+ 293              		.cfi_def_cfa_offset 4
+ 294              		@ sp needed
+ 295 0034 5DF804FB 		ldr	pc, [sp], #4
+ 296              	.L21:
+ 297              		.align	2
+ 298              	.L20:
+ 299 0038 00000000 		.word	can1Handle
+ 300 003c 00000000 		.word	.LC0
+ 301              		.cfi_endproc
+ 302              	.LFE71:
+ 304              		.section	.text.disableRX0Int,"ax",%progbits
+ 305              		.align	2
+ 306              		.thumb
+ 307              		.thumb_func
+ 309              	disableRX0Int:
+ 310              	.LFB66:
+  49:../../shared/firmware/Src/can.c **** 	HAL_NVIC_DisableIRQ((hcan == can1Handle) ? CAN1_RX0_IRQn : CAN2_RX0_IRQn);
+ 311              		.loc 1 49 0
+ 312              		.cfi_startproc
+ 313              		@ args = 0, pretend = 0, frame = 0
+ 314              		@ frame_needed = 0, uses_anonymous_args = 0
+ 315              	.LVL20:
+ 316 0000 08B5     		push	{r3, lr}
+ 317              	.LCFI9:
+ 318              		.cfi_def_cfa_offset 8
+ 319              		.cfi_offset 3, -8
+ 320              		.cfi_offset 14, -4
+  50:../../shared/firmware/Src/can.c **** 	__NOP(); //maybe this is not needed, but eh
+ 321              		.loc 1 50 0
+ 322 0002 054B     		ldr	r3, .L26
+ 323 0004 1B68     		ldr	r3, [r3]
+ARM GAS  /tmp/ccoTQmNc.s 			page 9
+
+
+ 324 0006 8342     		cmp	r3, r0
+ 325 0008 01D1     		bne	.L24
+ 326 000a 1420     		movs	r0, #20
+ 327              	.LVL21:
+ 328 000c 00E0     		b	.L23
+ 329              	.LVL22:
+ 330              	.L24:
+ 331 000e 4020     		movs	r0, #64
+ 332              	.LVL23:
+ 333              	.L23:
+  50:../../shared/firmware/Src/can.c **** 	__NOP(); //maybe this is not needed, but eh
+ 334              		.loc 1 50 0 is_stmt 0 discriminator 4
+ 335 0010 FFF7FEFF 		bl	HAL_NVIC_DisableIRQ
+ 336              	.LVL24:
+ 337              	.LBB20:
+ 338              	.LBB21:
+ 339              		.file 2 "../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h"
+   1:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**************************************************************************//**
+   2:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * @file     cmsis_gcc.h
+   3:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * @brief    CMSIS Cortex-M Core Function/Instruction Header File
+   4:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * @version  V4.30
+   5:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * @date     20. October 2015
+   6:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  ******************************************************************************/
+   7:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* Copyright (c) 2009 - 2015 ARM LIMITED
+   8:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+   9:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    All rights reserved.
+  10:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    Redistribution and use in source and binary forms, with or without
+  11:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    modification, are permitted provided that the following conditions are met:
+  12:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    - Redistributions of source code must retain the above copyright
+  13:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      notice, this list of conditions and the following disclaimer.
+  14:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    - Redistributions in binary form must reproduce the above copyright
+  15:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      notice, this list of conditions and the following disclaimer in the
+  16:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      documentation and/or other materials provided with the distribution.
+  17:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    - Neither the name of ARM nor the names of its contributors may be used
+  18:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      to endorse or promote products derived from this software without
+  19:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****      specific prior written permission.
+  20:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    *
+  21:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS"
+  22:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+  23:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+  24:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    ARE DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDERS AND CONTRIBUTORS BE
+  25:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+  26:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+  27:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+  28:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+  29:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+  30:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE
+  31:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    POSSIBILITY OF SUCH DAMAGE.
+  32:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    ---------------------------------------------------------------------------*/
+  33:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  34:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  35:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #ifndef __CMSIS_GCC_H
+  36:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_H
+  37:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  38:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* ignore some GCC warnings */
+  39:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if defined ( __GNUC__ )
+  40:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic push
+ARM GAS  /tmp/ccoTQmNc.s 			page 10
+
+
+  41:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wsign-conversion"
+  42:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wconversion"
+  43:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #pragma GCC diagnostic ignored "-Wunused-parameter"
+  44:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+  45:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  46:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  47:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* ###########################  Core Function Access  ########################### */
+  48:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /** \ingroup  CMSIS_Core_FunctionInterface
+  49:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****     \defgroup CMSIS_Core_RegAccFunctions CMSIS Core Register Access Functions
+  50:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   @{
+  51:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  52:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  53:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+  54:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Enable IRQ Interrupts
+  55:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Enables IRQ interrupts by clearing the I-bit in the CPSR.
+  56:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****            Can only be executed in Privileged modes.
+  57:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  58:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __enable_irq(void)
+  59:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+  60:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsie i" : : : "memory");
+  61:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+  62:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  63:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  64:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+  65:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Disable IRQ Interrupts
+  66:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Disables IRQ interrupts by setting the I-bit in the CPSR.
+  67:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   Can only be executed in Privileged modes.
+  68:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  69:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __disable_irq(void)
+  70:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+  71:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsid i" : : : "memory");
+  72:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+  73:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  74:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  75:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+  76:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Control Register
+  77:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the content of the Control Register.
+  78:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Control Register value
+  79:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  80:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_CONTROL(void)
+  81:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+  82:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+  83:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  84:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, control" : "=r" (result) );
+  85:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+  86:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+  87:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  88:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  89:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+  90:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Control Register
+  91:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Writes the given value to the Control Register.
+  92:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    control  Control Register value to set
+  93:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+  94:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_CONTROL(uint32_t control)
+  95:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+  96:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR control, %0" : : "r" (control) : "memory");
+  97:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ARM GAS  /tmp/ccoTQmNc.s 			page 11
+
+
+  98:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+  99:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 100:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 101:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get IPSR Register
+ 102:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the content of the IPSR Register.
+ 103:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               IPSR Register value
+ 104:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 105:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_IPSR(void)
+ 106:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 107:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 108:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 109:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, ipsr" : "=r" (result) );
+ 110:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 111:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 112:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 113:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 114:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 115:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get APSR Register
+ 116:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the content of the APSR Register.
+ 117:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               APSR Register value
+ 118:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 119:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_APSR(void)
+ 120:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 121:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 122:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 123:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, apsr" : "=r" (result) );
+ 124:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 125:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 126:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 127:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 128:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 129:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get xPSR Register
+ 130:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the content of the xPSR Register.
+ 131:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 132:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****     \return               xPSR Register value
+ 133:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 134:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_xPSR(void)
+ 135:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 136:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 137:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 138:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, xpsr" : "=r" (result) );
+ 139:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 140:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 141:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 142:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 143:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 144:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Process Stack Pointer
+ 145:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Process Stack Pointer (PSP).
+ 146:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               PSP Register value
+ 147:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 148:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_PSP(void)
+ 149:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 150:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   register uint32_t result;
+ 151:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 152:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, psp\n"  : "=r" (result) );
+ 153:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 154:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ARM GAS  /tmp/ccoTQmNc.s 			page 12
+
+
+ 155:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 156:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 157:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 158:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Process Stack Pointer
+ 159:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Process Stack Pointer (PSP).
+ 160:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    topOfProcStack  Process Stack Pointer value to set
+ 161:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 162:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_PSP(uint32_t topOfProcStack)
+ 163:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 164:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR psp, %0\n" : : "r" (topOfProcStack) : "sp");
+ 165:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 166:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 167:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 168:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 169:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Main Stack Pointer
+ 170:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Main Stack Pointer (MSP).
+ 171:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               MSP Register value
+ 172:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 173:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_MSP(void)
+ 174:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 175:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   register uint32_t result;
+ 176:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 177:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, msp\n" : "=r" (result) );
+ 178:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 179:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 180:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 181:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 182:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 183:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Main Stack Pointer
+ 184:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Main Stack Pointer (MSP).
+ 185:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 186:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****     \param [in]    topOfMainStack  Main Stack Pointer value to set
+ 187:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 188:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_MSP(uint32_t topOfMainStack)
+ 189:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 190:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR msp, %0\n" : : "r" (topOfMainStack) : "sp");
+ 191:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 192:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 193:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 194:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 195:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Priority Mask
+ 196:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current state of the priority mask bit from the Priority Mask Register.
+ 197:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Priority Mask value
+ 198:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 199:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_PRIMASK(void)
+ 200:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 201:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 202:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 203:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, primask" : "=r" (result) );
+ 204:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 205:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 206:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 207:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 208:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 209:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Priority Mask
+ 210:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Priority Mask Register.
+ 211:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    priMask  Priority Mask
+ARM GAS  /tmp/ccoTQmNc.s 			page 13
+
+
+ 212:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 213:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_PRIMASK(uint32_t priMask)
+ 214:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 215:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR primask, %0" : : "r" (priMask) : "memory");
+ 216:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 217:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 218:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 219:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if       (__CORTEX_M >= 0x03U)
+ 220:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 221:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 222:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Enable FIQ
+ 223:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Enables FIQ interrupts by clearing the F-bit in the CPSR.
+ 224:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****            Can only be executed in Privileged modes.
+ 225:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 226:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __enable_fault_irq(void)
+ 227:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 228:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsie f" : : : "memory");
+ 229:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 230:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 231:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 232:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 233:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Disable FIQ
+ 234:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Disables FIQ interrupts by setting the F-bit in the CPSR.
+ 235:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****            Can only be executed in Privileged modes.
+ 236:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 237:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __disable_fault_irq(void)
+ 238:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 239:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("cpsid f" : : : "memory");
+ 240:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 241:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 242:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 243:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 244:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Base Priority
+ 245:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Base Priority register.
+ 246:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Base Priority register value
+ 247:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 248:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_BASEPRI(void)
+ 249:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 250:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 251:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 252:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, basepri" : "=r" (result) );
+ 253:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 254:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 255:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 256:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 257:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 258:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Base Priority
+ 259:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Base Priority register.
+ 260:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    basePri  Base Priority value to set
+ 261:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 262:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_BASEPRI(uint32_t value)
+ 263:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 264:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR basepri, %0" : : "r" (value) : "memory");
+ 265:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 266:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 267:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 268:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ARM GAS  /tmp/ccoTQmNc.s 			page 14
+
+
+ 269:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Base Priority with condition
+ 270:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Base Priority register only if BASEPRI masking is disable
+ 271:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****            or the new value increases the BASEPRI priority level.
+ 272:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    basePri  Base Priority value to set
+ 273:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 274:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_BASEPRI_MAX(uint32_t value)
+ 275:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 276:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR basepri_max, %0" : : "r" (value) : "memory");
+ 277:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 278:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 279:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 280:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 281:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get Fault Mask
+ 282:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Fault Mask register.
+ 283:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Fault Mask register value
+ 284:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 285:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_FAULTMASK(void)
+ 286:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 287:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 288:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 289:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MRS %0, faultmask" : "=r" (result) );
+ 290:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 291:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 292:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 293:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 294:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 295:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set Fault Mask
+ 296:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Fault Mask register.
+ 297:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    faultMask  Fault Mask value to set
+ 298:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 299:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_FAULTMASK(uint32_t faultMask)
+ 300:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 301:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("MSR faultmask, %0" : : "r" (faultMask) : "memory");
+ 302:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 303:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 304:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif /* (__CORTEX_M >= 0x03U) */
+ 305:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 306:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 307:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if       (__CORTEX_M == 0x04U) || (__CORTEX_M == 0x07U)
+ 308:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 309:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 310:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Get FPSCR
+ 311:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Returns the current value of the Floating Point Status/Control register.
+ 312:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \return               Floating Point Status/Control register value
+ 313:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 314:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE uint32_t __get_FPSCR(void)
+ 315:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 316:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if (__FPU_PRESENT == 1U) && (__FPU_USED == 1U)
+ 317:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   uint32_t result;
+ 318:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 319:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   /* Empty asm statement works as a scheduling barrier */
+ 320:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("");
+ 321:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("VMRS %0, fpscr" : "=r" (result) );
+ 322:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("");
+ 323:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   return(result);
+ 324:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #else
+ 325:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****    return(0);
+ARM GAS  /tmp/ccoTQmNc.s 			page 15
+
+
+ 326:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 327:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 328:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 329:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 330:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 331:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   Set FPSCR
+ 332:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details Assigns the given value to the Floating Point Status/Control register.
+ 333:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \param [in]    fpscr  Floating Point Status/Control value to set
+ 334:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 335:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__( ( always_inline ) ) __STATIC_INLINE void __set_FPSCR(uint32_t fpscr)
+ 336:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 337:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if (__FPU_PRESENT == 1U) && (__FPU_USED == 1U)
+ 338:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   /* Empty asm statement works as a scheduling barrier */
+ 339:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("");
+ 340:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("VMSR fpscr, %0" : : "r" (fpscr) : "vfpcc");
+ 341:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("");
+ 342:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 343:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** }
+ 344:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 345:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif /* (__CORTEX_M == 0x04U) || (__CORTEX_M == 0x07U) */
+ 346:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 347:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 348:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 349:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /*@} end of CMSIS_Core_RegAccFunctions */
+ 350:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 351:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 352:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* ##########################  Core Instruction Access  ######################### */
+ 353:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /** \defgroup CMSIS_Core_InstructionInterface CMSIS Core Instruction Interface
+ 354:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   Access to dedicated instructions
+ 355:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   @{
+ 356:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** */
+ 357:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 358:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /* Define macros for porting to both thumb1 and thumb2.
+ 359:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * For thumb1, use low register (r0-r7), specified by constraint "l"
+ 360:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  * Otherwise, use general registers, specified by constraint "r" */
+ 361:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #if defined (__thumb__) && !defined (__thumb2__)
+ 362:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_OUT_REG(r) "=l" (r)
+ 363:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_USE_REG(r) "l" (r)
+ 364:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #else
+ 365:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_OUT_REG(r) "=r" (r)
+ 366:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #define __CMSIS_GCC_USE_REG(r) "r" (r)
+ 367:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** #endif
+ 368:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** 
+ 369:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** /**
+ 370:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \brief   No Operation
+ 371:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   \details No Operation does nothing. This instruction can be used for code alignment purposes.
+ 372:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****  */
+ 373:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** __attribute__((always_inline)) __STATIC_INLINE void __NOP(void)
+ 374:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h **** {
+ 375:../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h ****   __ASM volatile ("nop");
+ 340              		.loc 2 375 0 is_stmt 1 discriminator 4
+ 341              	@ 375 "../../shared/firmware/Drivers/CMSIS/Include/cmsis_gcc.h" 1
+ 342 0014 00BF     		nop
+ 343              	@ 0 "" 2
+ 344              		.thumb
+ 345 0016 08BD     		pop	{r3, pc}
+ 346              	.L27:
+ARM GAS  /tmp/ccoTQmNc.s 			page 16
+
+
+ 347              		.align	2
+ 348              	.L26:
+ 349 0018 00000000 		.word	can1Handle
+ 350              	.LBE21:
+ 351              	.LBE20:
+ 352              		.cfi_endproc
+ 353              	.LFE66:
+ 355              		.section	.text.enableRX0Int,"ax",%progbits
+ 356              		.align	2
+ 357              		.thumb
+ 358              		.thumb_func
+ 360              	enableRX0Int:
+ 361              	.LFB67:
+  54:../../shared/firmware/Src/can.c **** 	HAL_NVIC_EnableIRQ((hcan == can1Handle) ? CAN1_RX0_IRQn : CAN2_RX0_IRQn);
+ 362              		.loc 1 54 0
+ 363              		.cfi_startproc
+ 364              		@ args = 0, pretend = 0, frame = 0
+ 365              		@ frame_needed = 0, uses_anonymous_args = 0
+ 366              	.LVL25:
+ 367 0000 08B5     		push	{r3, lr}
+ 368              	.LCFI10:
+ 369              		.cfi_def_cfa_offset 8
+ 370              		.cfi_offset 3, -8
+ 371              		.cfi_offset 14, -4
+  55:../../shared/firmware/Src/can.c **** }
+ 372              		.loc 1 55 0
+ 373 0002 054B     		ldr	r3, .L32
+ 374 0004 1B68     		ldr	r3, [r3]
+ 375 0006 8342     		cmp	r3, r0
+ 376 0008 01D1     		bne	.L30
+ 377 000a 1420     		movs	r0, #20
+ 378              	.LVL26:
+ 379 000c 00E0     		b	.L29
+ 380              	.LVL27:
+ 381              	.L30:
+ 382 000e 4020     		movs	r0, #64
+ 383              	.LVL28:
+ 384              	.L29:
+  55:../../shared/firmware/Src/can.c **** }
+ 385              		.loc 1 55 0 is_stmt 0 discriminator 4
+ 386 0010 FFF7FEFF 		bl	HAL_NVIC_EnableIRQ
+ 387              	.LVL29:
+ 388 0014 08BD     		pop	{r3, pc}
+ 389              	.L33:
+ 390 0016 00BF     		.align	2
+ 391              	.L32:
+ 392 0018 00000000 		.word	can1Handle
+ 393              		.cfi_endproc
+ 394              	.LFE67:
+ 396              		.section	.text.HAL_CAN_TxCpltCallback,"ax",%progbits
+ 397              		.align	2
+ 398              		.global	HAL_CAN_TxCpltCallback
+ 399              		.thumb
+ 400              		.thumb_func
+ 402              	HAL_CAN_TxCpltCallback:
+ 403              	.LFB63:
+  17:../../shared/firmware/Src/can.c **** // 	led(1,1);
+ARM GAS  /tmp/ccoTQmNc.s 			page 17
+
+
+ 404              		.loc 1 17 0 is_stmt 1
+ 405              		.cfi_startproc
+ 406              		@ args = 0, pretend = 0, frame = 0
+ 407              		@ frame_needed = 0, uses_anonymous_args = 0
+ 408              		@ link register save eliminated.
+ 409              	.LVL30:
+ 410 0000 7047     		bx	lr
+ 411              		.cfi_endproc
+ 412              	.LFE63:
+ 414 0002 00BF     		.section	.text.HAL_CAN_RxCpltCallback,"ax",%progbits
+ 415              		.align	2
+ 416              		.global	HAL_CAN_RxCpltCallback
+ 417              		.thumb
+ 418              		.thumb_func
+ 420              	HAL_CAN_RxCpltCallback:
+ 421              	.LFB64:
+  22:../../shared/firmware/Src/can.c **** // 	led(2,1);
+ 422              		.loc 1 22 0
+ 423              		.cfi_startproc
+ 424              		@ args = 0, pretend = 0, frame = 0
+ 425              		@ frame_needed = 0, uses_anonymous_args = 0
+ 426              	.LVL31:
+  22:../../shared/firmware/Src/can.c **** // 	led(2,1);
+ 427              		.loc 1 22 0
+ 428 0000 38B5     		push	{r3, r4, r5, lr}
+ 429              	.LCFI11:
+ 430              		.cfi_def_cfa_offset 16
+ 431              		.cfi_offset 3, -16
+ 432              		.cfi_offset 4, -12
+ 433              		.cfi_offset 5, -8
+ 434              		.cfi_offset 14, -4
+  25:../../shared/firmware/Src/can.c **** 
+ 435              		.loc 1 25 0
+ 436 0002 1C4B     		ldr	r3, .L42
+ 437 0004 1B68     		ldr	r3, [r3]
+ 438 0006 9842     		cmp	r0, r3
+ 439 0008 01D1     		bne	.L40
+ 440 000a 1B4C     		ldr	r4, .L42+4
+ 441 000c 00E0     		b	.L36
+ 442              	.L40:
+ 443 000e 1B4C     		ldr	r4, .L42+8
+ 444              	.L36:
+ 445              	.LVL32:
+  27:../../shared/firmware/Src/can.c **** 	uint8_t bytes = hcan->pRxMsg->DLC;
+ 446              		.loc 1 27 0 discriminator 4
+ 447 0010 6378     		ldrb	r3, [r4, #1]	@ zero_extendqisi2
+ 448 0012 426B     		ldr	r2, [r0, #52]
+ 449 0014 1288     		ldrh	r2, [r2]
+ 450 0016 03EB4303 		add	r3, r3, r3, lsl #1
+ 451 001a 9B00     		lsls	r3, r3, #2
+ 452 001c 2344     		add	r3, r3, r4
+ 453 001e 5A80     		strh	r2, [r3, #2]	@ movhi
+  28:../../shared/firmware/Src/can.c **** 	q->messages[q->tail].dlc = bytes;
+ 454              		.loc 1 28 0 discriminator 4
+ 455 0020 436B     		ldr	r3, [r0, #52]
+ 456 0022 1D69     		ldr	r5, [r3, #16]
+ 457 0024 EAB2     		uxtb	r2, r5
+ARM GAS  /tmp/ccoTQmNc.s 			page 18
+
+
+ 458              	.LVL33:
+  29:../../shared/firmware/Src/can.c **** 	for (int i = 0; i < bytes; ++i)
+ 459              		.loc 1 29 0 discriminator 4
+ 460 0026 6378     		ldrb	r3, [r4, #1]	@ zero_extendqisi2
+ 461 0028 03EB4303 		add	r3, r3, r3, lsl #1
+ 462 002c 9B00     		lsls	r3, r3, #2
+ 463 002e 2344     		add	r3, r3, r4
+ 464 0030 1A71     		strb	r2, [r3, #4]
+ 465              	.LVL34:
+ 466              	.LBB22:
+  30:../../shared/firmware/Src/can.c **** 		q->messages[q->tail].data[i] = hcan->pRxMsg->Data[i];
+ 467              		.loc 1 30 0 discriminator 4
+ 468 0032 0022     		movs	r2, #0
+ 469              	.LVL35:
+ 470 0034 0AE0     		b	.L37
+ 471              	.LVL36:
+ 472              	.L38:
+  31:../../shared/firmware/Src/can.c **** 
+ 473              		.loc 1 31 0 discriminator 3
+ 474 0036 6378     		ldrb	r3, [r4, #1]	@ zero_extendqisi2
+ 475 0038 416B     		ldr	r1, [r0, #52]
+ 476 003a 1144     		add	r1, r1, r2
+ 477 003c 097D     		ldrb	r1, [r1, #20]	@ zero_extendqisi2
+ 478 003e 03EB4303 		add	r3, r3, r3, lsl #1
+ 479 0042 9B00     		lsls	r3, r3, #2
+ 480 0044 1344     		add	r3, r3, r2
+ 481 0046 2344     		add	r3, r3, r4
+ 482 0048 5971     		strb	r1, [r3, #5]
+  30:../../shared/firmware/Src/can.c **** 		q->messages[q->tail].data[i] = hcan->pRxMsg->Data[i];
+ 483              		.loc 1 30 0 discriminator 3
+ 484 004a 0132     		adds	r2, r2, #1
+ 485              	.LVL37:
+ 486              	.L37:
+ 487 004c EBB2     		uxtb	r3, r5
+  30:../../shared/firmware/Src/can.c **** 		q->messages[q->tail].data[i] = hcan->pRxMsg->Data[i];
+ 488              		.loc 1 30 0 is_stmt 0 discriminator 1
+ 489 004e 9342     		cmp	r3, r2
+ 490 0050 F1DC     		bgt	.L38
+ 491              	.LBE22:
+  33:../../shared/firmware/Src/can.c **** 	q->tail %= CAN_MESSAGE_QUEUE_SIZE;
+ 492              		.loc 1 33 0 is_stmt 1
+ 493 0052 6378     		ldrb	r3, [r4, #1]	@ zero_extendqisi2
+ 494 0054 0133     		adds	r3, r3, #1
+ 495 0056 DBB2     		uxtb	r3, r3
+ 496 0058 6370     		strb	r3, [r4, #1]
+  34:../../shared/firmware/Src/can.c **** 
+ 497              		.loc 1 34 0
+ 498 005a 6378     		ldrb	r3, [r4, #1]	@ zero_extendqisi2
+ 499 005c 03F00F03 		and	r3, r3, #15
+ 500 0060 6370     		strb	r3, [r4, #1]
+  36:../../shared/firmware/Src/can.c **** 		led(2, 1);
+ 501              		.loc 1 36 0
+ 502 0062 0021     		movs	r1, #0
+ 503 0064 FFF7FEFF 		bl	HAL_CAN_Receive_IT
+ 504              	.LVL38:
+ 505 0068 18B1     		cbz	r0, .L35
+  37:../../shared/firmware/Src/can.c **** }
+ARM GAS  /tmp/ccoTQmNc.s 			page 19
+
+
+ 506              		.loc 1 37 0
+ 507 006a 0220     		movs	r0, #2
+ 508 006c 0121     		movs	r1, #1
+ 509 006e FFF7FEFF 		bl	led
+ 510              	.LVL39:
+ 511              	.L35:
+ 512 0072 38BD     		pop	{r3, r4, r5, pc}
+ 513              	.LVL40:
+ 514              	.L43:
+ 515              		.align	2
+ 516              	.L42:
+ 517 0074 00000000 		.word	can1Handle
+ 518 0078 00000000 		.word	.LANCHOR2
+ 519 007c 00000000 		.word	.LANCHOR3
+ 520              		.cfi_endproc
+ 521              	.LFE64:
+ 523              		.section	.text.HAL_CAN_ErrorCallback,"ax",%progbits
+ 524              		.align	2
+ 525              		.global	HAL_CAN_ErrorCallback
+ 526              		.thumb
+ 527              		.thumb_func
+ 529              	HAL_CAN_ErrorCallback:
+ 530              	.LFB65:
+  41:../../shared/firmware/Src/can.c **** 	lastCanError = hcan->ErrorCode;
+ 531              		.loc 1 41 0
+ 532              		.cfi_startproc
+ 533              		@ args = 0, pretend = 0, frame = 0
+ 534              		@ frame_needed = 0, uses_anonymous_args = 0
+ 535              	.LVL41:
+ 536 0000 08B5     		push	{r3, lr}
+ 537              	.LCFI12:
+ 538              		.cfi_def_cfa_offset 8
+ 539              		.cfi_offset 3, -8
+ 540              		.cfi_offset 14, -4
+  42:../../shared/firmware/Src/can.c **** 	if (HAL_CAN_Receive_IT(hcan, CAN_FIFO0) != HAL_OK)
+ 541              		.loc 1 42 0
+ 542 0002 026C     		ldr	r2, [r0, #64]
+ 543 0004 054B     		ldr	r3, .L47
+ 544 0006 1A60     		str	r2, [r3]
+  43:../../shared/firmware/Src/can.c **** 		led(3,1);
+ 545              		.loc 1 43 0
+ 546 0008 0021     		movs	r1, #0
+ 547 000a FFF7FEFF 		bl	HAL_CAN_Receive_IT
+ 548              	.LVL42:
+ 549 000e 18B1     		cbz	r0, .L44
+  44:../../shared/firmware/Src/can.c **** // 	_Error_Handler(__FILE__,__LINE__);
+ 550              		.loc 1 44 0
+ 551 0010 0320     		movs	r0, #3
+ 552 0012 0121     		movs	r1, #1
+ 553 0014 FFF7FEFF 		bl	led
+ 554              	.LVL43:
+ 555              	.L44:
+ 556 0018 08BD     		pop	{r3, pc}
+ 557              	.L48:
+ 558 001a 00BF     		.align	2
+ 559              	.L47:
+ 560 001c 00000000 		.word	.LANCHOR4
+ARM GAS  /tmp/ccoTQmNc.s 			page 20
+
+
+ 561              		.cfi_endproc
+ 562              	.LFE65:
+ 564              		.section	.text.configCanAddresses,"ax",%progbits
+ 565              		.align	2
+ 566              		.global	configCanAddresses
+ 567              		.thumb
+ 568              		.thumb_func
+ 570              	configCanAddresses:
+ 571              	.LFB72:
+ 135:../../shared/firmware/Src/can.c **** 
+ 136:../../shared/firmware/Src/can.c **** void configCanAddresses(uint8_t addressesSize, const uint16_t* addresses)
+ 137:../../shared/firmware/Src/can.c **** {
+ 572              		.loc 1 137 0
+ 573              		.cfi_startproc
+ 574              		@ args = 0, pretend = 0, frame = 0
+ 575              		@ frame_needed = 0, uses_anonymous_args = 0
+ 576              		@ link register save eliminated.
+ 577              	.LVL44:
+ 138:../../shared/firmware/Src/can.c **** 	ADDRESSES_SIZE = addressesSize;
+ 578              		.loc 1 138 0
+ 579 0000 024B     		ldr	r3, .L50
+ 580 0002 1870     		strb	r0, [r3]
+ 139:../../shared/firmware/Src/can.c **** 	myAddresses = addresses;
+ 581              		.loc 1 139 0
+ 582 0004 024B     		ldr	r3, .L50+4
+ 583 0006 1960     		str	r1, [r3]
+ 584 0008 7047     		bx	lr
+ 585              	.L51:
+ 586 000a 00BF     		.align	2
+ 587              	.L50:
+ 588 000c 00000000 		.word	.LANCHOR0
+ 589 0010 00000000 		.word	.LANCHOR1
+ 590              		.cfi_endproc
+ 591              	.LFE72:
+ 593              		.section	.text.canInit,"ax",%progbits
+ 594              		.align	2
+ 595              		.global	canInit
+ 596              		.thumb
+ 597              		.thumb_func
+ 599              	canInit:
+ 600              	.LFB73:
+ 140:../../shared/firmware/Src/can.c **** }
+ 141:../../shared/firmware/Src/can.c **** 
+ 142:../../shared/firmware/Src/can.c **** int canInit(CanMode can1, CanMode can2)
+ 143:../../shared/firmware/Src/can.c **** {
+ 601              		.loc 1 143 0
+ 602              		.cfi_startproc
+ 603              		@ args = 0, pretend = 0, frame = 0
+ 604              		@ frame_needed = 0, uses_anonymous_args = 0
+ 605              	.LVL45:
+ 606 0000 38B5     		push	{r3, r4, r5, lr}
+ 607              	.LCFI13:
+ 608              		.cfi_def_cfa_offset 16
+ 609              		.cfi_offset 3, -16
+ 610              		.cfi_offset 4, -12
+ 611              		.cfi_offset 5, -8
+ 612              		.cfi_offset 14, -4
+ARM GAS  /tmp/ccoTQmNc.s 			page 21
+
+
+ 613 0002 0D46     		mov	r5, r1
+ 144:../../shared/firmware/Src/can.c **** 	queue1.head = 0;
+ 614              		.loc 1 144 0
+ 615 0004 214A     		ldr	r2, .L62
+ 616 0006 0023     		movs	r3, #0
+ 617 0008 1370     		strb	r3, [r2]
+ 145:../../shared/firmware/Src/can.c **** 	queue1.tail = 0;
+ 618              		.loc 1 145 0
+ 619 000a 5370     		strb	r3, [r2, #1]
+ 146:../../shared/firmware/Src/can.c **** 	queue2.head = 0;
+ 620              		.loc 1 146 0
+ 621 000c 204A     		ldr	r2, .L62+4
+ 622 000e 1370     		strb	r3, [r2]
+ 147:../../shared/firmware/Src/can.c **** 	queue2.tail = 0;
+ 623              		.loc 1 147 0
+ 624 0010 5370     		strb	r3, [r2, #1]
+ 148:../../shared/firmware/Src/can.c **** 
+ 149:../../shared/firmware/Src/can.c **** 	static CanTxMsgTypeDef txMessage1, txMessage2;
+ 150:../../shared/firmware/Src/can.c **** 	static CanRxMsgTypeDef rxMessage1, rxMessage2;
+ 151:../../shared/firmware/Src/can.c **** 	if (can1 != CANMODE_OFF) {
+ 625              		.loc 1 151 0
+ 626 0012 0446     		mov	r4, r0
+ 627 0014 28B1     		cbz	r0, .L53
+ 152:../../shared/firmware/Src/can.c **** 		can1Handle->pTxMsg = &txMessage1;
+ 628              		.loc 1 152 0
+ 629 0016 1F4B     		ldr	r3, .L62+8
+ 630 0018 1B68     		ldr	r3, [r3]
+ 631 001a 1F4A     		ldr	r2, .L62+12
+ 632 001c 1A63     		str	r2, [r3, #48]
+ 153:../../shared/firmware/Src/can.c **** 		can1Handle->pRxMsg = &rxMessage1;
+ 633              		.loc 1 153 0
+ 634 001e 1F4A     		ldr	r2, .L62+16
+ 635 0020 5A63     		str	r2, [r3, #52]
+ 636              	.L53:
+ 154:../../shared/firmware/Src/can.c **** 	}
+ 155:../../shared/firmware/Src/can.c **** 	if (can2 != CANMODE_OFF) {
+ 637              		.loc 1 155 0
+ 638 0022 2DB1     		cbz	r5, .L54
+ 156:../../shared/firmware/Src/can.c **** 		can2Handle->pTxMsg = &txMessage2;
+ 639              		.loc 1 156 0
+ 640 0024 1E4B     		ldr	r3, .L62+20
+ 641 0026 1B68     		ldr	r3, [r3]
+ 642 0028 1E4A     		ldr	r2, .L62+24
+ 643 002a 1A63     		str	r2, [r3, #48]
+ 157:../../shared/firmware/Src/can.c **** 		can2Handle->pRxMsg = &rxMessage2;
+ 644              		.loc 1 157 0
+ 645 002c 1E4A     		ldr	r2, .L62+28
+ 646 002e 5A63     		str	r2, [r3, #52]
+ 647              	.L54:
+ 158:../../shared/firmware/Src/can.c **** 	}
+ 159:../../shared/firmware/Src/can.c **** 
+ 160:../../shared/firmware/Src/can.c **** 	if (can1 == CANMODE_CANTEROS && myAddresses == NULL)
+ 648              		.loc 1 160 0
+ 649 0030 022C     		cmp	r4, #2
+ 650 0032 06D1     		bne	.L55
+ 651              		.loc 1 160 0 is_stmt 0 discriminator 1
+ 652 0034 1D4B     		ldr	r3, .L62+32
+ARM GAS  /tmp/ccoTQmNc.s 			page 22
+
+
+ 653 0036 1B68     		ldr	r3, [r3]
+ 654 0038 1BB9     		cbnz	r3, .L55
+ 161:../../shared/firmware/Src/can.c **** 		_Error_Handler(__FILE__, __LINE__);
+ 655              		.loc 1 161 0 is_stmt 1
+ 656 003a 1D48     		ldr	r0, .L62+36
+ 657              	.LVL46:
+ 658 003c A121     		movs	r1, #161
+ 659              	.LVL47:
+ 660 003e FFF7FEFF 		bl	_Error_Handler
+ 661              	.LVL48:
+ 662              	.L55:
+ 162:../../shared/firmware/Src/can.c **** 	if (can1 == CANMODE_CANTEROS)
+ 663              		.loc 1 162 0
+ 664 0042 022C     		cmp	r4, #2
+ 665 0044 02D1     		bne	.L56
+ 163:../../shared/firmware/Src/can.c **** 		setupFilters1Canteros();
+ 666              		.loc 1 163 0
+ 667 0046 FFF7FEFF 		bl	setupFilters1Canteros
+ 668              	.LVL49:
+ 669 004a 03E0     		b	.L57
+ 670              	.L56:
+ 164:../../shared/firmware/Src/can.c **** 	else if (can1 == CANMODE_RAW)
+ 671              		.loc 1 164 0
+ 672 004c 012C     		cmp	r4, #1
+ 673 004e 01D1     		bne	.L57
+ 165:../../shared/firmware/Src/can.c **** 		setupFilters1Accept();
+ 674              		.loc 1 165 0
+ 675 0050 FFF7FEFF 		bl	setupFilters1Accept
+ 676              	.LVL50:
+ 677              	.L57:
+ 166:../../shared/firmware/Src/can.c **** 
+ 167:../../shared/firmware/Src/can.c **** 	if (can2 == CANMODE_RAW)
+ 678              		.loc 1 167 0
+ 679 0054 012D     		cmp	r5, #1
+ 680 0056 01D1     		bne	.L58
+ 168:../../shared/firmware/Src/can.c **** 		setupFilters2Accept();
+ 681              		.loc 1 168 0
+ 682 0058 FFF7FEFF 		bl	setupFilters2Accept
+ 683              	.LVL51:
+ 684              	.L58:
+ 169:../../shared/firmware/Src/can.c **** 
+ 170:../../shared/firmware/Src/can.c **** 	if (can1 != CANMODE_OFF && HAL_CAN_Receive_IT(can1Handle, CAN_FIFO0))
+ 685              		.loc 1 170 0
+ 686 005c 4CB1     		cbz	r4, .L59
+ 687              		.loc 1 170 0 is_stmt 0 discriminator 1
+ 688 005e 0D4B     		ldr	r3, .L62+8
+ 689 0060 1868     		ldr	r0, [r3]
+ 690 0062 0021     		movs	r1, #0
+ 691 0064 FFF7FEFF 		bl	HAL_CAN_Receive_IT
+ 692              	.LVL52:
+ 693 0068 18B1     		cbz	r0, .L59
+ 171:../../shared/firmware/Src/can.c **** 		_Error_Handler(__FILE__,__LINE__);
+ 694              		.loc 1 171 0 is_stmt 1
+ 695 006a 1148     		ldr	r0, .L62+36
+ 696 006c AB21     		movs	r1, #171
+ 697 006e FFF7FEFF 		bl	_Error_Handler
+ 698              	.LVL53:
+ARM GAS  /tmp/ccoTQmNc.s 			page 23
+
+
+ 699              	.L59:
+ 172:../../shared/firmware/Src/can.c **** 
+ 173:../../shared/firmware/Src/can.c **** 	if (can2 != CANMODE_OFF && HAL_CAN_Receive_IT(can2Handle, CAN_FIFO0))
+ 700              		.loc 1 173 0
+ 701 0072 4DB1     		cbz	r5, .L60
+ 702              		.loc 1 173 0 is_stmt 0 discriminator 1
+ 703 0074 0A4B     		ldr	r3, .L62+20
+ 704 0076 1868     		ldr	r0, [r3]
+ 705 0078 0021     		movs	r1, #0
+ 706 007a FFF7FEFF 		bl	HAL_CAN_Receive_IT
+ 707              	.LVL54:
+ 708 007e 18B1     		cbz	r0, .L60
+ 174:../../shared/firmware/Src/can.c **** 		_Error_Handler(__FILE__,__LINE__);
+ 709              		.loc 1 174 0 is_stmt 1
+ 710 0080 0B48     		ldr	r0, .L62+36
+ 711 0082 AE21     		movs	r1, #174
+ 712 0084 FFF7FEFF 		bl	_Error_Handler
+ 713              	.LVL55:
+ 714              	.L60:
+ 175:../../shared/firmware/Src/can.c **** 
+ 176:../../shared/firmware/Src/can.c **** 	return 0;
+ 177:../../shared/firmware/Src/can.c **** }
+ 715              		.loc 1 177 0
+ 716 0088 0020     		movs	r0, #0
+ 717 008a 38BD     		pop	{r3, r4, r5, pc}
+ 718              	.L63:
+ 719              		.align	2
+ 720              	.L62:
+ 721 008c 00000000 		.word	.LANCHOR2
+ 722 0090 00000000 		.word	.LANCHOR3
+ 723 0094 00000000 		.word	can1Handle
+ 724 0098 00000000 		.word	.LANCHOR5
+ 725 009c 00000000 		.word	.LANCHOR6
+ 726 00a0 00000000 		.word	can2Handle
+ 727 00a4 00000000 		.word	.LANCHOR7
+ 728 00a8 00000000 		.word	.LANCHOR8
+ 729 00ac 00000000 		.word	.LANCHOR1
+ 730 00b0 00000000 		.word	.LC0
+ 731              		.cfi_endproc
+ 732              	.LFE73:
+ 734              		.section	.text.canSendMessage,"ax",%progbits
+ 735              		.align	2
+ 736              		.global	canSendMessage
+ 737              		.thumb
+ 738              		.thumb_func
+ 740              	canSendMessage:
+ 741              	.LFB74:
+ 178:../../shared/firmware/Src/can.c **** 
+ 179:../../shared/firmware/Src/can.c **** HAL_StatusTypeDef canSendMessage(CAN_HandleTypeDef* hcan, const CanMessage* toSend)
+ 180:../../shared/firmware/Src/can.c **** {
+ 742              		.loc 1 180 0
+ 743              		.cfi_startproc
+ 744              		@ args = 0, pretend = 0, frame = 0
+ 745              		@ frame_needed = 0, uses_anonymous_args = 0
+ 746              	.LVL56:
+ 747 0000 38B5     		push	{r3, r4, r5, lr}
+ 748              	.LCFI14:
+ARM GAS  /tmp/ccoTQmNc.s 			page 24
+
+
+ 749              		.cfi_def_cfa_offset 16
+ 750              		.cfi_offset 3, -16
+ 751              		.cfi_offset 4, -12
+ 752              		.cfi_offset 5, -8
+ 753              		.cfi_offset 14, -4
+ 754 0002 0446     		mov	r4, r0
+ 181:../../shared/firmware/Src/can.c **** 	hcan->pTxMsg->StdId = toSend->id;
+ 755              		.loc 1 181 0
+ 756 0004 036B     		ldr	r3, [r0, #48]
+ 757 0006 0A88     		ldrh	r2, [r1]
+ 758 0008 1A60     		str	r2, [r3]
+ 182:../../shared/firmware/Src/can.c **** 	hcan->pTxMsg->RTR = CAN_RTR_DATA;
+ 759              		.loc 1 182 0
+ 760 000a 026B     		ldr	r2, [r0, #48]
+ 761 000c 0023     		movs	r3, #0
+ 762 000e D360     		str	r3, [r2, #12]
+ 183:../../shared/firmware/Src/can.c **** 	hcan->pTxMsg->IDE = CAN_ID_STD;
+ 763              		.loc 1 183 0
+ 764 0010 026B     		ldr	r2, [r0, #48]
+ 765 0012 9360     		str	r3, [r2, #8]
+ 184:../../shared/firmware/Src/can.c **** 	hcan->pTxMsg->DLC = toSend->dlc;
+ 766              		.loc 1 184 0
+ 767 0014 026B     		ldr	r2, [r0, #48]
+ 768 0016 8878     		ldrb	r0, [r1, #2]	@ zero_extendqisi2
+ 769              	.LVL57:
+ 770 0018 1061     		str	r0, [r2, #16]
+ 771              	.LVL58:
+ 772              	.LBB23:
+ 185:../../shared/firmware/Src/can.c **** 	for (int i = 0; i < toSend->dlc; ++i)
+ 773              		.loc 1 185 0
+ 774 001a 05E0     		b	.L65
+ 775              	.LVL59:
+ 776              	.L66:
+ 186:../../shared/firmware/Src/can.c **** 		hcan->pTxMsg->Data[i] = toSend->data[i];
+ 777              		.loc 1 186 0 discriminator 3
+ 778 001c 226B     		ldr	r2, [r4, #48]
+ 779 001e C818     		adds	r0, r1, r3
+ 780 0020 C078     		ldrb	r0, [r0, #3]	@ zero_extendqisi2
+ 781 0022 1A44     		add	r2, r2, r3
+ 782 0024 1075     		strb	r0, [r2, #20]
+ 185:../../shared/firmware/Src/can.c **** 	for (int i = 0; i < toSend->dlc; ++i)
+ 783              		.loc 1 185 0 discriminator 3
+ 784 0026 0133     		adds	r3, r3, #1
+ 785              	.LVL60:
+ 786              	.L65:
+ 185:../../shared/firmware/Src/can.c **** 	for (int i = 0; i < toSend->dlc; ++i)
+ 787              		.loc 1 185 0 is_stmt 0 discriminator 1
+ 788 0028 8A78     		ldrb	r2, [r1, #2]	@ zero_extendqisi2
+ 789 002a 9A42     		cmp	r2, r3
+ 790 002c F6DC     		bgt	.L66
+ 791              	.LBE23:
+ 187:../../shared/firmware/Src/can.c **** 
+ 188:../../shared/firmware/Src/can.c **** 	disableRX0Int(hcan);
+ 792              		.loc 1 188 0 is_stmt 1
+ 793 002e 2046     		mov	r0, r4
+ 794 0030 FFF7FEFF 		bl	disableRX0Int
+ 795              	.LVL61:
+ARM GAS  /tmp/ccoTQmNc.s 			page 25
+
+
+ 189:../../shared/firmware/Src/can.c **** 	HAL_StatusTypeDef resTransmit = HAL_CAN_Transmit_IT(hcan);
+ 796              		.loc 1 189 0
+ 797 0034 2046     		mov	r0, r4
+ 798 0036 FFF7FEFF 		bl	HAL_CAN_Transmit_IT
+ 799              	.LVL62:
+ 800 003a 0546     		mov	r5, r0
+ 801              	.LVL63:
+ 190:../../shared/firmware/Src/can.c **** 	enableRX0Int(hcan);
+ 802              		.loc 1 190 0
+ 803 003c 2046     		mov	r0, r4
+ 804 003e FFF7FEFF 		bl	enableRX0Int
+ 805              	.LVL64:
+ 191:../../shared/firmware/Src/can.c **** 
+ 192:../../shared/firmware/Src/can.c **** 	return resTransmit;
+ 193:../../shared/firmware/Src/can.c **** }
+ 806              		.loc 1 193 0
+ 807 0042 2846     		mov	r0, r5
+ 808 0044 38BD     		pop	{r3, r4, r5, pc}
+ 809              		.cfi_endproc
+ 810              	.LFE74:
+ 812 0046 00BF     		.section	.text.canCheckInbox,"ax",%progbits
+ 813              		.align	2
+ 814              		.global	canCheckInbox
+ 815              		.thumb
+ 816              		.thumb_func
+ 818              	canCheckInbox:
+ 819              	.LFB75:
+ 194:../../shared/firmware/Src/can.c **** 
+ 195:../../shared/firmware/Src/can.c **** int canCheckInbox(CAN_HandleTypeDef* hcan)
+ 196:../../shared/firmware/Src/can.c **** {
+ 820              		.loc 1 196 0
+ 821              		.cfi_startproc
+ 822              		@ args = 0, pretend = 0, frame = 0
+ 823              		@ frame_needed = 0, uses_anonymous_args = 0
+ 824              		@ link register save eliminated.
+ 825              	.LVL65:
+ 197:../../shared/firmware/Src/can.c **** 	volatile CanMessageQueue* q = (hcan == can1Handle) ? &queue1 : &queue2;
+ 826              		.loc 1 197 0
+ 827 0000 094B     		ldr	r3, .L72
+ 828 0002 1B68     		ldr	r3, [r3]
+ 829 0004 8342     		cmp	r3, r0
+ 830 0006 01D1     		bne	.L71
+ 831 0008 084B     		ldr	r3, .L72+4
+ 832 000a 00E0     		b	.L69
+ 833              	.L71:
+ 834 000c 084B     		ldr	r3, .L72+8
+ 835              	.L69:
+ 836              	.LVL66:
+ 198:../../shared/firmware/Src/can.c **** 	return (CAN_MESSAGE_QUEUE_SIZE + q->tail - q->head) % CAN_MESSAGE_QUEUE_SIZE;
+ 837              		.loc 1 198 0 discriminator 4
+ 838 000e 5878     		ldrb	r0, [r3, #1]	@ zero_extendqisi2
+ 839              	.LVL67:
+ 840 0010 1030     		adds	r0, r0, #16
+ 841 0012 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 842              	.LVL68:
+ 843 0014 C01A     		subs	r0, r0, r3
+ 844 0016 074B     		ldr	r3, .L72+12
+ARM GAS  /tmp/ccoTQmNc.s 			page 26
+
+
+ 845 0018 1840     		ands	r0, r0, r3
+ 846 001a 03D5     		bpl	.L70
+ 847 001c 0138     		subs	r0, r0, #1
+ 848 001e 60F00F00 		orn	r0, r0, #15
+ 849 0022 0130     		adds	r0, r0, #1
+ 850              	.L70:
+ 199:../../shared/firmware/Src/can.c **** }
+ 851              		.loc 1 199 0 discriminator 4
+ 852 0024 7047     		bx	lr
+ 853              	.L73:
+ 854 0026 00BF     		.align	2
+ 855              	.L72:
+ 856 0028 00000000 		.word	can1Handle
+ 857 002c 00000000 		.word	.LANCHOR2
+ 858 0030 00000000 		.word	.LANCHOR3
+ 859 0034 0F000080 		.word	-2147483633
+ 860              		.cfi_endproc
+ 861              	.LFE75:
+ 863              		.section	.text.canGetNew,"ax",%progbits
+ 864              		.align	2
+ 865              		.global	canGetNew
+ 866              		.thumb
+ 867              		.thumb_func
+ 869              	canGetNew:
+ 870              	.LFB76:
+ 200:../../shared/firmware/Src/can.c **** 
+ 201:../../shared/firmware/Src/can.c **** int canGetNew(CAN_HandleTypeDef* hcan, CanMessage* toStore)
+ 202:../../shared/firmware/Src/can.c **** {
+ 871              		.loc 1 202 0
+ 872              		.cfi_startproc
+ 873              		@ args = 0, pretend = 0, frame = 0
+ 874              		@ frame_needed = 0, uses_anonymous_args = 0
+ 875              	.LVL69:
+ 876 0000 70B5     		push	{r4, r5, r6, lr}
+ 877              	.LCFI15:
+ 878              		.cfi_def_cfa_offset 16
+ 879              		.cfi_offset 4, -16
+ 880              		.cfi_offset 5, -12
+ 881              		.cfi_offset 6, -8
+ 882              		.cfi_offset 14, -4
+ 883 0002 0546     		mov	r5, r0
+ 884 0004 0E46     		mov	r6, r1
+ 203:../../shared/firmware/Src/can.c **** 	if (canCheckInbox(hcan) <= 0)
+ 885              		.loc 1 203 0
+ 886 0006 FFF7FEFF 		bl	canCheckInbox
+ 887              	.LVL70:
+ 888 000a 0028     		cmp	r0, #0
+ 889 000c 22DD     		ble	.L77
+ 204:../../shared/firmware/Src/can.c **** 		return -1;
+ 205:../../shared/firmware/Src/can.c **** 
+ 206:../../shared/firmware/Src/can.c **** 	volatile CanMessageQueue* q = (hcan == can1Handle) ? &queue1 : &queue2;
+ 890              		.loc 1 206 0
+ 891 000e 134B     		ldr	r3, .L80
+ 892 0010 1B68     		ldr	r3, [r3]
+ 893 0012 9D42     		cmp	r5, r3
+ 894 0014 01D1     		bne	.L78
+ 895 0016 124C     		ldr	r4, .L80+4
+ARM GAS  /tmp/ccoTQmNc.s 			page 27
+
+
+ 896 0018 00E0     		b	.L76
+ 897              	.L78:
+ 898 001a 124C     		ldr	r4, .L80+8
+ 899              	.L76:
+ 900              	.LVL71:
+ 207:../../shared/firmware/Src/can.c **** 
+ 208:../../shared/firmware/Src/can.c **** 	disableRX0Int(hcan);
+ 901              		.loc 1 208 0 discriminator 4
+ 902 001c 2846     		mov	r0, r5
+ 903 001e FFF7FEFF 		bl	disableRX0Int
+ 904              	.LVL72:
+ 209:../../shared/firmware/Src/can.c **** 	*toStore = q->messages[q->head];
+ 905              		.loc 1 209 0 discriminator 4
+ 906 0022 2378     		ldrb	r3, [r4]	@ zero_extendqisi2
+ 907 0024 03EB4303 		add	r3, r3, r3, lsl #1
+ 908 0028 9B00     		lsls	r3, r3, #2
+ 909 002a 2344     		add	r3, r3, r4
+ 910 002c 53F8021F 		ldr	r1, [r3, #2]!	@ unaligned
+ 911 0030 5A68     		ldr	r2, [r3, #4]	@ unaligned
+ 912 0032 9B68     		ldr	r3, [r3, #8]	@ unaligned
+ 913 0034 3160     		str	r1, [r6]	@ unaligned
+ 914 0036 7260     		str	r2, [r6, #4]	@ unaligned
+ 915 0038 B360     		str	r3, [r6, #8]	@ unaligned
+ 210:../../shared/firmware/Src/can.c **** 	enableRX0Int(hcan);
+ 916              		.loc 1 210 0 discriminator 4
+ 917 003a 2846     		mov	r0, r5
+ 918 003c FFF7FEFF 		bl	enableRX0Int
+ 919              	.LVL73:
+ 211:../../shared/firmware/Src/can.c **** 
+ 212:../../shared/firmware/Src/can.c **** 	++(q->head);
+ 920              		.loc 1 212 0 discriminator 4
+ 921 0040 2378     		ldrb	r3, [r4]	@ zero_extendqisi2
+ 922 0042 0133     		adds	r3, r3, #1
+ 923 0044 DBB2     		uxtb	r3, r3
+ 924 0046 2370     		strb	r3, [r4]
+ 213:../../shared/firmware/Src/can.c **** 	q->head %= CAN_MESSAGE_QUEUE_SIZE;
+ 925              		.loc 1 213 0 discriminator 4
+ 926 0048 2378     		ldrb	r3, [r4]	@ zero_extendqisi2
+ 927 004a 03F00F03 		and	r3, r3, #15
+ 928 004e 2370     		strb	r3, [r4]
+ 214:../../shared/firmware/Src/can.c **** 
+ 215:../../shared/firmware/Src/can.c **** 	return 0;
+ 929              		.loc 1 215 0 discriminator 4
+ 930 0050 0020     		movs	r0, #0
+ 931 0052 70BD     		pop	{r4, r5, r6, pc}
+ 932              	.LVL74:
+ 933              	.L77:
+ 204:../../shared/firmware/Src/can.c **** 
+ 934              		.loc 1 204 0
+ 935 0054 4FF0FF30 		mov	r0, #-1
+ 216:../../shared/firmware/Src/can.c **** }
+ 936              		.loc 1 216 0
+ 937 0058 70BD     		pop	{r4, r5, r6, pc}
+ 938              	.LVL75:
+ 939              	.L81:
+ 940 005a 00BF     		.align	2
+ 941              	.L80:
+ARM GAS  /tmp/ccoTQmNc.s 			page 28
+
+
+ 942 005c 00000000 		.word	can1Handle
+ 943 0060 00000000 		.word	.LANCHOR2
+ 944 0064 00000000 		.word	.LANCHOR3
+ 945              		.cfi_endproc
+ 946              	.LFE76:
+ 948              		.global	lastCanError
+ 949              		.section	.bss.txMessage2.7414,"aw",%nobits
+ 950              		.align	2
+ 951              		.set	.LANCHOR7,. + 0
+ 954              	txMessage2.7414:
+ 955 0000 00000000 		.space	28
+ 955      00000000 
+ 955      00000000 
+ 955      00000000 
+ 955      00000000 
+ 956              		.section	.bss.rxMessage1.7415,"aw",%nobits
+ 957              		.align	2
+ 958              		.set	.LANCHOR6,. + 0
+ 961              	rxMessage1.7415:
+ 962 0000 00000000 		.space	36
+ 962      00000000 
+ 962      00000000 
+ 962      00000000 
+ 962      00000000 
+ 963              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 964              		.align	2
+ 965              	.LC0:
+ 966 0000 2E2E2F2E 		.ascii	"../../shared/firmware/Src/can.c\000"
+ 966      2E2F7368 
+ 966      61726564 
+ 966      2F666972 
+ 966      6D776172 
+ 967              		.section	.bss.myAddresses,"aw",%nobits
+ 968              		.align	2
+ 969              		.set	.LANCHOR1,. + 0
+ 972              	myAddresses:
+ 973 0000 00000000 		.space	4
+ 974              		.section	.bss.ADDRESSES_SIZE,"aw",%nobits
+ 975              		.set	.LANCHOR0,. + 0
+ 978              	ADDRESSES_SIZE:
+ 979 0000 00       		.space	1
+ 980              		.section	.bss.rxMessage2.7416,"aw",%nobits
+ 981              		.align	2
+ 982              		.set	.LANCHOR8,. + 0
+ 985              	rxMessage2.7416:
+ 986 0000 00000000 		.space	36
+ 986      00000000 
+ 986      00000000 
+ 986      00000000 
+ 986      00000000 
+ 987              		.section	.bss.txMessage1.7413,"aw",%nobits
+ 988              		.align	2
+ 989              		.set	.LANCHOR5,. + 0
+ 992              	txMessage1.7413:
+ 993 0000 00000000 		.space	28
+ 993      00000000 
+ 993      00000000 
+ARM GAS  /tmp/ccoTQmNc.s 			page 29
+
+
+ 993      00000000 
+ 993      00000000 
+ 994              		.section	.bss.lastCanError,"aw",%nobits
+ 995              		.align	2
+ 996              		.set	.LANCHOR4,. + 0
+ 999              	lastCanError:
+ 1000 0000 00000000 		.space	4
+ 1001              		.section	.bss.queue1,"aw",%nobits
+ 1002              		.align	2
+ 1003              		.set	.LANCHOR2,. + 0
+ 1006              	queue1:
+ 1007 0000 00000000 		.space	194
+ 1007      00000000 
+ 1007      00000000 
+ 1007      00000000 
+ 1007      00000000 
+ 1008              		.section	.bss.queue2,"aw",%nobits
+ 1009              		.align	2
+ 1010              		.set	.LANCHOR3,. + 0
+ 1013              	queue2:
+ 1014 0000 00000000 		.space	194
+ 1014      00000000 
+ 1014      00000000 
+ 1014      00000000 
+ 1014      00000000 
+ 1015              		.text
+ 1016              	.Letext0:
+ 1017              		.file 3 "/usr/include/newlib/machine/_default_types.h"
+ 1018              		.file 4 "/usr/include/newlib/sys/_stdint.h"
+ 1019              		.file 5 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 1020              		.file 6 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f1xx.h"
+ 1021              		.file 7 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 1022              		.file 8 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_can.h"
+ 1023              		.file 9 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_can_ex.h"
+ 1024              		.file 10 "../../shared/firmware/Inc/can.h"
+ 1025              		.file 11 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 1026              		.file 12 "../../shared/firmware/Inc/globals.h"
+ 1027              		.file 13 "Inc/main.h"
+ 1028              		.file 14 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_cortex.h"
+ARM GAS  /tmp/ccoTQmNc.s 			page 30
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 can.c
+     /tmp/ccoTQmNc.s:19     .text.setupFilters1Canteros:0000000000000000 $t
+     /tmp/ccoTQmNc.s:23     .text.setupFilters1Canteros:0000000000000000 setupFilters1Canteros
+     /tmp/ccoTQmNc.s:161    .text.setupFilters1Canteros:0000000000000078 $d
+     /tmp/ccoTQmNc.s:169    .text.setupFilters1Accept:0000000000000000 $t
+     /tmp/ccoTQmNc.s:173    .text.setupFilters1Accept:0000000000000000 setupFilters1Accept
+     /tmp/ccoTQmNc.s:231    .text.setupFilters1Accept:0000000000000038 $d
+     /tmp/ccoTQmNc.s:237    .text.setupFilters2Accept:0000000000000000 $t
+     /tmp/ccoTQmNc.s:241    .text.setupFilters2Accept:0000000000000000 setupFilters2Accept
+     /tmp/ccoTQmNc.s:299    .text.setupFilters2Accept:0000000000000038 $d
+     /tmp/ccoTQmNc.s:305    .text.disableRX0Int:0000000000000000 $t
+     /tmp/ccoTQmNc.s:309    .text.disableRX0Int:0000000000000000 disableRX0Int
+     /tmp/ccoTQmNc.s:349    .text.disableRX0Int:0000000000000018 $d
+     /tmp/ccoTQmNc.s:356    .text.enableRX0Int:0000000000000000 $t
+     /tmp/ccoTQmNc.s:360    .text.enableRX0Int:0000000000000000 enableRX0Int
+     /tmp/ccoTQmNc.s:392    .text.enableRX0Int:0000000000000018 $d
+     /tmp/ccoTQmNc.s:397    .text.HAL_CAN_TxCpltCallback:0000000000000000 $t
+     /tmp/ccoTQmNc.s:402    .text.HAL_CAN_TxCpltCallback:0000000000000000 HAL_CAN_TxCpltCallback
+     /tmp/ccoTQmNc.s:415    .text.HAL_CAN_RxCpltCallback:0000000000000000 $t
+     /tmp/ccoTQmNc.s:420    .text.HAL_CAN_RxCpltCallback:0000000000000000 HAL_CAN_RxCpltCallback
+     /tmp/ccoTQmNc.s:517    .text.HAL_CAN_RxCpltCallback:0000000000000074 $d
+     /tmp/ccoTQmNc.s:524    .text.HAL_CAN_ErrorCallback:0000000000000000 $t
+     /tmp/ccoTQmNc.s:529    .text.HAL_CAN_ErrorCallback:0000000000000000 HAL_CAN_ErrorCallback
+     /tmp/ccoTQmNc.s:560    .text.HAL_CAN_ErrorCallback:000000000000001c $d
+     /tmp/ccoTQmNc.s:565    .text.configCanAddresses:0000000000000000 $t
+     /tmp/ccoTQmNc.s:570    .text.configCanAddresses:0000000000000000 configCanAddresses
+     /tmp/ccoTQmNc.s:588    .text.configCanAddresses:000000000000000c $d
+     /tmp/ccoTQmNc.s:594    .text.canInit:0000000000000000 $t
+     /tmp/ccoTQmNc.s:599    .text.canInit:0000000000000000 canInit
+     /tmp/ccoTQmNc.s:721    .text.canInit:000000000000008c $d
+     /tmp/ccoTQmNc.s:735    .text.canSendMessage:0000000000000000 $t
+     /tmp/ccoTQmNc.s:740    .text.canSendMessage:0000000000000000 canSendMessage
+     /tmp/ccoTQmNc.s:813    .text.canCheckInbox:0000000000000000 $t
+     /tmp/ccoTQmNc.s:818    .text.canCheckInbox:0000000000000000 canCheckInbox
+     /tmp/ccoTQmNc.s:856    .text.canCheckInbox:0000000000000028 $d
+     /tmp/ccoTQmNc.s:864    .text.canGetNew:0000000000000000 $t
+     /tmp/ccoTQmNc.s:869    .text.canGetNew:0000000000000000 canGetNew
+     /tmp/ccoTQmNc.s:942    .text.canGetNew:000000000000005c $d
+     /tmp/ccoTQmNc.s:999    .bss.lastCanError:0000000000000000 lastCanError
+     /tmp/ccoTQmNc.s:950    .bss.txMessage2.7414:0000000000000000 $d
+     /tmp/ccoTQmNc.s:954    .bss.txMessage2.7414:0000000000000000 txMessage2.7414
+     /tmp/ccoTQmNc.s:957    .bss.rxMessage1.7415:0000000000000000 $d
+     /tmp/ccoTQmNc.s:961    .bss.rxMessage1.7415:0000000000000000 rxMessage1.7415
+     /tmp/ccoTQmNc.s:964    .rodata.str1.4:0000000000000000 $d
+     /tmp/ccoTQmNc.s:968    .bss.myAddresses:0000000000000000 $d
+     /tmp/ccoTQmNc.s:972    .bss.myAddresses:0000000000000000 myAddresses
+     /tmp/ccoTQmNc.s:978    .bss.ADDRESSES_SIZE:0000000000000000 ADDRESSES_SIZE
+     /tmp/ccoTQmNc.s:979    .bss.ADDRESSES_SIZE:0000000000000000 $d
+     /tmp/ccoTQmNc.s:981    .bss.rxMessage2.7416:0000000000000000 $d
+     /tmp/ccoTQmNc.s:985    .bss.rxMessage2.7416:0000000000000000 rxMessage2.7416
+     /tmp/ccoTQmNc.s:988    .bss.txMessage1.7413:0000000000000000 $d
+     /tmp/ccoTQmNc.s:992    .bss.txMessage1.7413:0000000000000000 txMessage1.7413
+     /tmp/ccoTQmNc.s:995    .bss.lastCanError:0000000000000000 $d
+     /tmp/ccoTQmNc.s:1002   .bss.queue1:0000000000000000 $d
+     /tmp/ccoTQmNc.s:1006   .bss.queue1:0000000000000000 queue1
+     /tmp/ccoTQmNc.s:1009   .bss.queue2:0000000000000000 $d
+ARM GAS  /tmp/ccoTQmNc.s 			page 31
+
+
+     /tmp/ccoTQmNc.s:1013   .bss.queue2:0000000000000000 queue2
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+_Error_Handler
+HAL_CAN_ConfigFilter
+can1Handle
+HAL_NVIC_DisableIRQ
+HAL_NVIC_EnableIRQ
+HAL_CAN_Receive_IT
+led
+can2Handle
+HAL_CAN_Transmit_IT

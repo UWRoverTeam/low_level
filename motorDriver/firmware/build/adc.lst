@@ -1,0 +1,355 @@
+ARM GAS  /tmp/cckylKAW.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"adc.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.HAL_ADC_ConvCpltCallback,"ax",%progbits
+  19              		.align	2
+  20              		.global	HAL_ADC_ConvCpltCallback
+  21              		.thumb
+  22              		.thumb_func
+  24              	HAL_ADC_ConvCpltCallback:
+  25              	.LFB63:
+  26              		.file 1 "Src/adc.c"
+   1:Src/adc.c     **** #include "adc.h"
+   2:Src/adc.c     **** 
+   3:Src/adc.c     **** static uint16_t measured1, measured2;
+   4:Src/adc.c     **** volatile static bool complete1, complete2;
+   5:Src/adc.c     **** 
+   6:Src/adc.c     **** void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+   7:Src/adc.c     **** {
+  27              		.loc 1 7 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+  32              	.LVL0:
+   8:Src/adc.c     **** 	if (hadc == adc1Handle)
+  33              		.loc 1 8 0
+  34 0000 074B     		ldr	r3, .L4
+  35 0002 1B68     		ldr	r3, [r3]
+  36 0004 9842     		cmp	r0, r3
+  37 0006 03D1     		bne	.L2
+   9:Src/adc.c     **** 		complete1 = true;
+  38              		.loc 1 9 0
+  39 0008 0122     		movs	r2, #1
+  40 000a 064B     		ldr	r3, .L4+4
+  41 000c 1A70     		strb	r2, [r3]
+  42 000e 7047     		bx	lr
+  43              	.L2:
+  10:Src/adc.c     **** 	else if (hadc == adc2Handle)
+  44              		.loc 1 10 0
+  45 0010 054B     		ldr	r3, .L4+8
+  46 0012 1B68     		ldr	r3, [r3]
+  47 0014 9842     		cmp	r0, r3
+  48 0016 02D1     		bne	.L1
+ARM GAS  /tmp/cckylKAW.s 			page 2
+
+
+  11:Src/adc.c     **** 		complete2 = true;
+  49              		.loc 1 11 0
+  50 0018 0122     		movs	r2, #1
+  51 001a 044B     		ldr	r3, .L4+12
+  52 001c 1A70     		strb	r2, [r3]
+  53              	.L1:
+  54 001e 7047     		bx	lr
+  55              	.L5:
+  56              		.align	2
+  57              	.L4:
+  58 0020 00000000 		.word	adc1Handle
+  59 0024 00000000 		.word	.LANCHOR0
+  60 0028 00000000 		.word	adc2Handle
+  61 002c 00000000 		.word	.LANCHOR1
+  62              		.cfi_endproc
+  63              	.LFE63:
+  65              		.section	.text.adcInit,"ax",%progbits
+  66              		.align	2
+  67              		.global	adcInit
+  68              		.thumb
+  69              		.thumb_func
+  71              	adcInit:
+  72              	.LFB64:
+  12:Src/adc.c     **** }
+  13:Src/adc.c     **** 
+  14:Src/adc.c     **** void adcInit()
+  15:Src/adc.c     **** {
+  73              		.loc 1 15 0
+  74              		.cfi_startproc
+  75              		@ args = 0, pretend = 0, frame = 0
+  76              		@ frame_needed = 0, uses_anonymous_args = 0
+  77 0000 08B5     		push	{r3, lr}
+  78              	.LCFI0:
+  79              		.cfi_def_cfa_offset 8
+  80              		.cfi_offset 3, -8
+  81              		.cfi_offset 14, -4
+  16:Src/adc.c     **** 	HAL_ADC_Start_IT(adc1Handle);
+  82              		.loc 1 16 0
+  83 0002 044B     		ldr	r3, .L8
+  84 0004 1868     		ldr	r0, [r3]
+  85 0006 FFF7FEFF 		bl	HAL_ADC_Start_IT
+  86              	.LVL1:
+  17:Src/adc.c     **** 	HAL_ADC_Start_IT(adc2Handle);
+  87              		.loc 1 17 0
+  88 000a 034B     		ldr	r3, .L8+4
+  89 000c 1868     		ldr	r0, [r3]
+  90 000e FFF7FEFF 		bl	HAL_ADC_Start_IT
+  91              	.LVL2:
+  92 0012 08BD     		pop	{r3, pc}
+  93              	.L9:
+  94              		.align	2
+  95              	.L8:
+  96 0014 00000000 		.word	adc1Handle
+  97 0018 00000000 		.word	adc2Handle
+  98              		.cfi_endproc
+  99              	.LFE64:
+ 101              		.section	.text.adcUpdate,"ax",%progbits
+ARM GAS  /tmp/cckylKAW.s 			page 3
+
+
+ 102              		.align	2
+ 103              		.global	adcUpdate
+ 104              		.thumb
+ 105              		.thumb_func
+ 107              	adcUpdate:
+ 108              	.LFB65:
+  18:Src/adc.c     **** }
+  19:Src/adc.c     **** 
+  20:Src/adc.c     **** int adcUpdate()
+  21:Src/adc.c     **** {
+ 109              		.loc 1 21 0
+ 110              		.cfi_startproc
+ 111              		@ args = 0, pretend = 0, frame = 0
+ 112              		@ frame_needed = 0, uses_anonymous_args = 0
+ 113 0000 38B5     		push	{r3, r4, r5, lr}
+ 114              	.LCFI1:
+ 115              		.cfi_def_cfa_offset 16
+ 116              		.cfi_offset 3, -16
+ 117              		.cfi_offset 4, -12
+ 118              		.cfi_offset 5, -8
+ 119              		.cfi_offset 14, -4
+ 120              	.LVL3:
+  22:Src/adc.c     **** 	int ret = 0;
+  23:Src/adc.c     **** 	if (complete1) {
+ 121              		.loc 1 23 0
+ 122 0002 144B     		ldr	r3, .L15
+ 123 0004 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 124 0006 13F0FF0F 		tst	r3, #255
+ 125 000a 0DD0     		beq	.L13
+  24:Src/adc.c     **** 		complete1 = false;
+ 126              		.loc 1 24 0
+ 127 000c 0022     		movs	r2, #0
+ 128 000e 114B     		ldr	r3, .L15
+ 129 0010 1A70     		strb	r2, [r3]
+  25:Src/adc.c     **** 		measured1 = HAL_ADC_GetValue(adc1Handle);
+ 130              		.loc 1 25 0
+ 131 0012 114C     		ldr	r4, .L15+4
+ 132 0014 2068     		ldr	r0, [r4]
+ 133 0016 FFF7FEFF 		bl	HAL_ADC_GetValue
+ 134              	.LVL4:
+ 135 001a 104B     		ldr	r3, .L15+8
+ 136 001c 1880     		strh	r0, [r3]	@ movhi
+  26:Src/adc.c     **** 		HAL_ADC_Start_IT(adc1Handle);
+ 137              		.loc 1 26 0
+ 138 001e 2068     		ldr	r0, [r4]
+ 139 0020 FFF7FEFF 		bl	HAL_ADC_Start_IT
+ 140              	.LVL5:
+  27:Src/adc.c     **** 		ret += 1;
+ 141              		.loc 1 27 0
+ 142 0024 0124     		movs	r4, #1
+ 143 0026 00E0     		b	.L11
+ 144              	.LVL6:
+ 145              	.L13:
+  22:Src/adc.c     **** 	if (complete1) {
+ 146              		.loc 1 22 0
+ 147 0028 0024     		movs	r4, #0
+ 148              	.LVL7:
+ARM GAS  /tmp/cckylKAW.s 			page 4
+
+
+ 149              	.L11:
+  28:Src/adc.c     **** 	}
+  29:Src/adc.c     **** 	if (complete2) {
+ 150              		.loc 1 29 0
+ 151 002a 0D4B     		ldr	r3, .L15+12
+ 152 002c 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 153 002e 13F0FF0F 		tst	r3, #255
+ 154 0032 0CD0     		beq	.L12
+  30:Src/adc.c     **** 		complete2 = false;
+ 155              		.loc 1 30 0
+ 156 0034 0022     		movs	r2, #0
+ 157 0036 0A4B     		ldr	r3, .L15+12
+ 158 0038 1A70     		strb	r2, [r3]
+  31:Src/adc.c     **** 		measured2 = HAL_ADC_GetValue(adc2Handle);
+ 159              		.loc 1 31 0
+ 160 003a 0A4D     		ldr	r5, .L15+16
+ 161 003c 2868     		ldr	r0, [r5]
+ 162 003e FFF7FEFF 		bl	HAL_ADC_GetValue
+ 163              	.LVL8:
+ 164 0042 094B     		ldr	r3, .L15+20
+ 165 0044 1880     		strh	r0, [r3]	@ movhi
+  32:Src/adc.c     **** 		HAL_ADC_Start_IT(adc2Handle);
+ 166              		.loc 1 32 0
+ 167 0046 2868     		ldr	r0, [r5]
+ 168 0048 FFF7FEFF 		bl	HAL_ADC_Start_IT
+ 169              	.LVL9:
+  33:Src/adc.c     **** 		ret += 2;
+ 170              		.loc 1 33 0
+ 171 004c 0234     		adds	r4, r4, #2
+ 172              	.LVL10:
+ 173              	.L12:
+  34:Src/adc.c     **** 	}
+  35:Src/adc.c     **** 	return ret;
+  36:Src/adc.c     **** }
+ 174              		.loc 1 36 0
+ 175 004e 2046     		mov	r0, r4
+ 176 0050 38BD     		pop	{r3, r4, r5, pc}
+ 177              	.LVL11:
+ 178              	.L16:
+ 179 0052 00BF     		.align	2
+ 180              	.L15:
+ 181 0054 00000000 		.word	.LANCHOR0
+ 182 0058 00000000 		.word	adc1Handle
+ 183 005c 00000000 		.word	.LANCHOR2
+ 184 0060 00000000 		.word	.LANCHOR1
+ 185 0064 00000000 		.word	adc2Handle
+ 186 0068 00000000 		.word	.LANCHOR3
+ 187              		.cfi_endproc
+ 188              	.LFE65:
+ 190              		.section	.text.adcGet1,"ax",%progbits
+ 191              		.align	2
+ 192              		.global	adcGet1
+ 193              		.thumb
+ 194              		.thumb_func
+ 196              	adcGet1:
+ 197              	.LFB66:
+  37:Src/adc.c     **** 
+ARM GAS  /tmp/cckylKAW.s 			page 5
+
+
+  38:Src/adc.c     **** uint16_t adcGet1()
+  39:Src/adc.c     **** {
+ 198              		.loc 1 39 0
+ 199              		.cfi_startproc
+ 200              		@ args = 0, pretend = 0, frame = 0
+ 201              		@ frame_needed = 0, uses_anonymous_args = 0
+ 202              		@ link register save eliminated.
+  40:Src/adc.c     **** 	return measured1;
+  41:Src/adc.c     **** }
+ 203              		.loc 1 41 0
+ 204 0000 014B     		ldr	r3, .L18
+ 205 0002 1888     		ldrh	r0, [r3]
+ 206 0004 7047     		bx	lr
+ 207              	.L19:
+ 208 0006 00BF     		.align	2
+ 209              	.L18:
+ 210 0008 00000000 		.word	.LANCHOR2
+ 211              		.cfi_endproc
+ 212              	.LFE66:
+ 214              		.section	.text.adcGet2,"ax",%progbits
+ 215              		.align	2
+ 216              		.global	adcGet2
+ 217              		.thumb
+ 218              		.thumb_func
+ 220              	adcGet2:
+ 221              	.LFB67:
+  42:Src/adc.c     **** 
+  43:Src/adc.c     **** uint16_t adcGet2()
+  44:Src/adc.c     **** {
+ 222              		.loc 1 44 0
+ 223              		.cfi_startproc
+ 224              		@ args = 0, pretend = 0, frame = 0
+ 225              		@ frame_needed = 0, uses_anonymous_args = 0
+ 226              		@ link register save eliminated.
+  45:Src/adc.c     **** 	return measured2;
+  46:Src/adc.c     **** }
+ 227              		.loc 1 46 0
+ 228 0000 014B     		ldr	r3, .L21
+ 229 0002 1888     		ldrh	r0, [r3]
+ 230 0004 7047     		bx	lr
+ 231              	.L22:
+ 232 0006 00BF     		.align	2
+ 233              	.L21:
+ 234 0008 00000000 		.word	.LANCHOR3
+ 235              		.cfi_endproc
+ 236              	.LFE67:
+ 238              		.section	.bss.measured1,"aw",%nobits
+ 239              		.align	1
+ 240              		.set	.LANCHOR2,. + 0
+ 243              	measured1:
+ 244 0000 0000     		.space	2
+ 245              		.section	.bss.measured2,"aw",%nobits
+ 246              		.align	1
+ 247              		.set	.LANCHOR3,. + 0
+ 250              	measured2:
+ 251 0000 0000     		.space	2
+ 252              		.section	.bss.complete1,"aw",%nobits
+ARM GAS  /tmp/cckylKAW.s 			page 6
+
+
+ 253              		.set	.LANCHOR0,. + 0
+ 256              	complete1:
+ 257 0000 00       		.space	1
+ 258              		.section	.bss.complete2,"aw",%nobits
+ 259              		.set	.LANCHOR1,. + 0
+ 262              	complete2:
+ 263 0000 00       		.space	1
+ 264              		.text
+ 265              	.Letext0:
+ 266              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 267              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 268              		.file 4 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 269              		.file 5 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 270              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 271              		.file 7 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc.h"
+ 272              		.file 8 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 273              		.file 9 "Inc/handles.h"
+ARM GAS  /tmp/cckylKAW.s 			page 7
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 adc.c
+     /tmp/cckylKAW.s:19     .text.HAL_ADC_ConvCpltCallback:0000000000000000 $t
+     /tmp/cckylKAW.s:24     .text.HAL_ADC_ConvCpltCallback:0000000000000000 HAL_ADC_ConvCpltCallback
+     /tmp/cckylKAW.s:58     .text.HAL_ADC_ConvCpltCallback:0000000000000020 $d
+     /tmp/cckylKAW.s:66     .text.adcInit:0000000000000000 $t
+     /tmp/cckylKAW.s:71     .text.adcInit:0000000000000000 adcInit
+     /tmp/cckylKAW.s:96     .text.adcInit:0000000000000014 $d
+     /tmp/cckylKAW.s:102    .text.adcUpdate:0000000000000000 $t
+     /tmp/cckylKAW.s:107    .text.adcUpdate:0000000000000000 adcUpdate
+     /tmp/cckylKAW.s:181    .text.adcUpdate:0000000000000054 $d
+     /tmp/cckylKAW.s:191    .text.adcGet1:0000000000000000 $t
+     /tmp/cckylKAW.s:196    .text.adcGet1:0000000000000000 adcGet1
+     /tmp/cckylKAW.s:210    .text.adcGet1:0000000000000008 $d
+     /tmp/cckylKAW.s:215    .text.adcGet2:0000000000000000 $t
+     /tmp/cckylKAW.s:220    .text.adcGet2:0000000000000000 adcGet2
+     /tmp/cckylKAW.s:234    .text.adcGet2:0000000000000008 $d
+     /tmp/cckylKAW.s:239    .bss.measured1:0000000000000000 $d
+     /tmp/cckylKAW.s:243    .bss.measured1:0000000000000000 measured1
+     /tmp/cckylKAW.s:246    .bss.measured2:0000000000000000 $d
+     /tmp/cckylKAW.s:250    .bss.measured2:0000000000000000 measured2
+     /tmp/cckylKAW.s:256    .bss.complete1:0000000000000000 complete1
+     /tmp/cckylKAW.s:257    .bss.complete1:0000000000000000 $d
+     /tmp/cckylKAW.s:262    .bss.complete2:0000000000000000 complete2
+     /tmp/cckylKAW.s:263    .bss.complete2:0000000000000000 $d
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+adc1Handle
+adc2Handle
+HAL_ADC_Start_IT
+HAL_ADC_GetValue

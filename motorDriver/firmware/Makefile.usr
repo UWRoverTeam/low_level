@@ -1,0 +1,10 @@
+#not complete Makefile, meant to be included
+
+USR_SOURCES += \
+Src/adc.c \
+Src/handles.c \
+Src/motor.c \
+Src/usrMain.c
+
+
+USR_CFLAGS = -std=c11

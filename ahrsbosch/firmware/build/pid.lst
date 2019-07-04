@@ -1,0 +1,345 @@
+ARM GAS  /tmp/ccoxpnr8.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 2
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"pid.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.global	__aeabi_fsub
+  19              		.global	__aeabi_fmul
+  20              		.global	__aeabi_fadd
+  21              		.global	__aeabi_fcmpgt
+  22              		.global	__aeabi_fcmplt
+  23              		.section	.text.pidCompute,"ax",%progbits
+  24              		.align	2
+  25              		.global	pidCompute
+  26              		.thumb
+  27              		.thumb_func
+  29              	pidCompute:
+  30              	.LFB63:
+  31              		.file 1 "../../shared/firmware/Src/pid.c"
+   1:../../shared/firmware/Src/pid.c **** #include "pid.h"
+   2:../../shared/firmware/Src/pid.c **** 
+   3:../../shared/firmware/Src/pid.c **** bool pidCompute(PidData* data)
+   4:../../shared/firmware/Src/pid.c **** {
+  32              		.loc 1 4 0
+  33              		.cfi_startproc
+  34              		@ args = 0, pretend = 0, frame = 0
+  35              		@ frame_needed = 0, uses_anonymous_args = 0
+  36              	.LVL0:
+  37 0000 2DE9F047 		push	{r4, r5, r6, r7, r8, r9, r10, lr}
+  38              	.LCFI0:
+  39              		.cfi_def_cfa_offset 32
+  40              		.cfi_offset 4, -32
+  41              		.cfi_offset 5, -28
+  42              		.cfi_offset 6, -24
+  43              		.cfi_offset 7, -20
+  44              		.cfi_offset 8, -16
+  45              		.cfi_offset 9, -12
+  46              		.cfi_offset 10, -8
+  47              		.cfi_offset 14, -4
+   5:../../shared/firmware/Src/pid.c **** 	if (!data->on)
+  48              		.loc 1 5 0
+  49 0004 90F83050 		ldrb	r5, [r0, #48]	@ zero_extendqisi2
+  50 0008 1DB9     		cbnz	r5, .L2
+  51              	.LVL1:
+  52              	.L4:
+   6:../../shared/firmware/Src/pid.c **** 		return false;
+ARM GAS  /tmp/ccoxpnr8.s 			page 2
+
+
+  53              		.loc 1 6 0
+  54 000a 0025     		movs	r5, #0
+   7:../../shared/firmware/Src/pid.c **** 	uint32_t now = HAL_GetTick();
+   8:../../shared/firmware/Src/pid.c **** 	if (now < data->lastCompute + data->period)
+   9:../../shared/firmware/Src/pid.c **** 		return false;
+  10:../../shared/firmware/Src/pid.c **** 	data->lastCompute = now;
+  11:../../shared/firmware/Src/pid.c **** 
+  12:../../shared/firmware/Src/pid.c **** 	float error = data->setpoint - data->input;
+  13:../../shared/firmware/Src/pid.c **** 
+  14:../../shared/firmware/Src/pid.c **** 	data->integral += (data->Ki * error);
+  15:../../shared/firmware/Src/pid.c **** 	data->integral = CLAMP_VALUE(data->integral, data->outputMin, data->outputMax);
+  16:../../shared/firmware/Src/pid.c **** 
+  17:../../shared/firmware/Src/pid.c **** 	data->output = (data->Kp * error) + data->integral - (data->Kd * (data->input - data->lastInput));
+  18:../../shared/firmware/Src/pid.c **** 	data->output = CLAMP_VALUE(data->output, data->outputMin, data->outputMax);
+  19:../../shared/firmware/Src/pid.c **** 
+  20:../../shared/firmware/Src/pid.c **** 	data->lastInput = data->input;
+  21:../../shared/firmware/Src/pid.c **** 	return true;
+  22:../../shared/firmware/Src/pid.c **** }
+  55              		.loc 1 22 0
+  56 000c 2846     		mov	r0, r5
+  57 000e BDE8F087 		pop	{r4, r5, r6, r7, r8, r9, r10, pc}
+  58              	.LVL2:
+  59              	.L2:
+  60 0012 0446     		mov	r4, r0
+   7:../../shared/firmware/Src/pid.c **** 	uint32_t now = HAL_GetTick();
+  61              		.loc 1 7 0
+  62 0014 FFF7FEFF 		bl	HAL_GetTick
+  63              	.LVL3:
+   8:../../shared/firmware/Src/pid.c **** 		return false;
+  64              		.loc 1 8 0
+  65 0018 A26A     		ldr	r2, [r4, #40]
+  66 001a 636A     		ldr	r3, [r4, #36]
+  67 001c 1344     		add	r3, r3, r2
+  68 001e 9842     		cmp	r0, r3
+  69 0020 F3D3     		bcc	.L4
+  12:../../shared/firmware/Src/pid.c **** 
+  70              		.loc 1 12 0
+  71 0022 E768     		ldr	r7, [r4, #12]	@ float
+  10:../../shared/firmware/Src/pid.c **** 
+  72              		.loc 1 10 0
+  73 0024 6062     		str	r0, [r4, #36]
+  12:../../shared/firmware/Src/pid.c **** 
+  74              		.loc 1 12 0
+  75 0026 3946     		mov	r1, r7
+  76 0028 2069     		ldr	r0, [r4, #16]	@ float
+  77              	.LVL4:
+  78 002a FFF7FEFF 		bl	__aeabi_fsub
+  79              	.LVL5:
+  14:../../shared/firmware/Src/pid.c **** 	data->integral = CLAMP_VALUE(data->integral, data->outputMin, data->outputMax);
+  80              		.loc 1 14 0
+  81 002e 6168     		ldr	r1, [r4, #4]	@ float
+  12:../../shared/firmware/Src/pid.c **** 
+  82              		.loc 1 12 0
+  83 0030 8146     		mov	r9, r0
+  84              	.LVL6:
+  14:../../shared/firmware/Src/pid.c **** 	data->integral = CLAMP_VALUE(data->integral, data->outputMin, data->outputMax);
+  85              		.loc 1 14 0
+ARM GAS  /tmp/ccoxpnr8.s 			page 3
+
+
+  86 0032 FFF7FEFF 		bl	__aeabi_fmul
+  87              	.LVL7:
+  88 0036 216A     		ldr	r1, [r4, #32]	@ float
+  89 0038 FFF7FEFF 		bl	__aeabi_fadd
+  90              	.LVL8:
+  15:../../shared/firmware/Src/pid.c **** 
+  91              		.loc 1 15 0
+  92 003c A669     		ldr	r6, [r4, #24]	@ float
+  14:../../shared/firmware/Src/pid.c **** 	data->integral = CLAMP_VALUE(data->integral, data->outputMin, data->outputMax);
+  93              		.loc 1 14 0
+  94 003e 8246     		mov	r10, r0
+  15:../../shared/firmware/Src/pid.c **** 
+  95              		.loc 1 15 0
+  96 0040 3146     		mov	r1, r6
+  97 0042 FFF7FEFF 		bl	__aeabi_fcmpgt
+  98              	.LVL9:
+  99 0046 0028     		cmp	r0, #0
+ 100 0048 2FD1     		bne	.L7
+  15:../../shared/firmware/Src/pid.c **** 
+ 101              		.loc 1 15 0 is_stmt 0 discriminator 2
+ 102 004a D4F81C80 		ldr	r8, [r4, #28]	@ float
+ 103 004e 5046     		mov	r0, r10
+ 104 0050 4146     		mov	r1, r8
+ 105 0052 FFF7FEFF 		bl	__aeabi_fcmplt
+ 106              	.LVL10:
+ 107 0056 00B9     		cbnz	r0, .L5
+  15:../../shared/firmware/Src/pid.c **** 
+ 108              		.loc 1 15 0
+ 109 0058 D046     		mov	r8, r10
+ 110              	.L5:
+  15:../../shared/firmware/Src/pid.c **** 
+ 111              		.loc 1 15 0 discriminator 8
+ 112 005a C4F82080 		str	r8, [r4, #32]	@ float
+  17:../../shared/firmware/Src/pid.c **** 	data->output = CLAMP_VALUE(data->output, data->outputMin, data->outputMax);
+ 113              		.loc 1 17 0 is_stmt 1 discriminator 8
+ 114 005e 2168     		ldr	r1, [r4]	@ float
+ 115 0060 4846     		mov	r0, r9
+ 116 0062 FFF7FEFF 		bl	__aeabi_fmul
+ 117              	.LVL11:
+ 118 0066 0146     		mov	r1, r0
+ 119 0068 4046     		mov	r0, r8
+ 120 006a FFF7FEFF 		bl	__aeabi_fadd
+ 121              	.LVL12:
+ 122 006e E16A     		ldr	r1, [r4, #44]	@ float
+ 123 0070 8046     		mov	r8, r0
+ 124 0072 3846     		mov	r0, r7
+ 125 0074 FFF7FEFF 		bl	__aeabi_fsub
+ 126              	.LVL13:
+ 127 0078 A168     		ldr	r1, [r4, #8]	@ float
+ 128 007a FFF7FEFF 		bl	__aeabi_fmul
+ 129              	.LVL14:
+ 130 007e 0146     		mov	r1, r0
+ 131 0080 4046     		mov	r0, r8
+ 132 0082 FFF7FEFF 		bl	__aeabi_fsub
+ 133              	.LVL15:
+ 134 0086 8046     		mov	r8, r0
+  18:../../shared/firmware/Src/pid.c **** 
+ARM GAS  /tmp/ccoxpnr8.s 			page 4
+
+
+ 135              		.loc 1 18 0 discriminator 8
+ 136 0088 3046     		mov	r0, r6
+ 137 008a 4146     		mov	r1, r8
+ 138 008c FFF7FEFF 		bl	__aeabi_fcmplt
+ 139              	.LVL16:
+ 140 0090 30B9     		cbnz	r0, .L6
+  18:../../shared/firmware/Src/pid.c **** 
+ 141              		.loc 1 18 0 is_stmt 0 discriminator 2
+ 142 0092 E669     		ldr	r6, [r4, #28]	@ float
+ 143 0094 4046     		mov	r0, r8
+ 144 0096 3146     		mov	r1, r6
+ 145 0098 FFF7FEFF 		bl	__aeabi_fcmplt
+ 146              	.LVL17:
+ 147 009c 00B9     		cbnz	r0, .L6
+  18:../../shared/firmware/Src/pid.c **** 
+ 148              		.loc 1 18 0
+ 149 009e 4646     		mov	r6, r8
+ 150              	.L6:
+  18:../../shared/firmware/Src/pid.c **** 
+ 151              		.loc 1 18 0 discriminator 8
+ 152 00a0 6661     		str	r6, [r4, #20]	@ float
+  20:../../shared/firmware/Src/pid.c **** 	return true;
+ 153              		.loc 1 20 0 is_stmt 1 discriminator 8
+ 154 00a2 E762     		str	r7, [r4, #44]	@ float
+ 155              		.loc 1 22 0 discriminator 8
+ 156 00a4 2846     		mov	r0, r5
+ 157 00a6 BDE8F087 		pop	{r4, r5, r6, r7, r8, r9, r10, pc}
+ 158              	.LVL18:
+ 159              	.L7:
+  15:../../shared/firmware/Src/pid.c **** 
+ 160              		.loc 1 15 0
+ 161 00aa B046     		mov	r8, r6
+ 162 00ac D5E7     		b	.L5
+ 163              		.cfi_endproc
+ 164              	.LFE63:
+ 166 00ae 00BF     		.section	.text.pidStart,"ax",%progbits
+ 167              		.align	2
+ 168              		.global	pidStart
+ 169              		.thumb
+ 170              		.thumb_func
+ 172              	pidStart:
+ 173              	.LFB64:
+  23:../../shared/firmware/Src/pid.c **** 
+  24:../../shared/firmware/Src/pid.c **** void pidStart(PidData* data)
+  25:../../shared/firmware/Src/pid.c **** {
+ 174              		.loc 1 25 0
+ 175              		.cfi_startproc
+ 176              		@ args = 0, pretend = 0, frame = 0
+ 177              		@ frame_needed = 0, uses_anonymous_args = 0
+ 178              	.LVL19:
+ 179 0000 70B5     		push	{r4, r5, r6, lr}
+ 180              	.LCFI1:
+ 181              		.cfi_def_cfa_offset 16
+ 182              		.cfi_offset 4, -16
+ 183              		.cfi_offset 5, -12
+ 184              		.cfi_offset 6, -8
+ 185              		.cfi_offset 14, -4
+ARM GAS  /tmp/ccoxpnr8.s 			page 5
+
+
+  26:../../shared/firmware/Src/pid.c **** 	data->integral = data->output;
+  27:../../shared/firmware/Src/pid.c **** 	data->integral = CLAMP_VALUE(data->integral, data->outputMin, data->outputMax);
+ 186              		.loc 1 27 0
+ 187 0002 8569     		ldr	r5, [r0, #24]	@ float
+  26:../../shared/firmware/Src/pid.c **** 	data->integral = data->output;
+ 188              		.loc 1 26 0
+ 189 0004 4669     		ldr	r6, [r0, #20]	@ float
+  25:../../shared/firmware/Src/pid.c **** 	data->integral = data->output;
+ 190              		.loc 1 25 0
+ 191 0006 0446     		mov	r4, r0
+ 192              		.loc 1 27 0
+ 193 0008 2946     		mov	r1, r5
+ 194 000a 3046     		mov	r0, r6
+ 195              	.LVL20:
+ 196 000c FFF7FEFF 		bl	__aeabi_fcmpgt
+ 197              	.LVL21:
+ 198 0010 28B9     		cbnz	r0, .L11
+ 199              		.loc 1 27 0 is_stmt 0 discriminator 2
+ 200 0012 E569     		ldr	r5, [r4, #28]	@ float
+ 201 0014 3046     		mov	r0, r6
+ 202 0016 2946     		mov	r1, r5
+ 203 0018 FFF7FEFF 		bl	__aeabi_fcmplt
+ 204              	.LVL22:
+ 205 001c 30B1     		cbz	r0, .L13
+ 206              	.L11:
+  28:../../shared/firmware/Src/pid.c **** 	data->lastInput = data->input;
+ 207              		.loc 1 28 0 is_stmt 1 discriminator 8
+ 208 001e E268     		ldr	r2, [r4, #12]	@ float
+  29:../../shared/firmware/Src/pid.c **** 	data->on = true;
+ 209              		.loc 1 29 0 discriminator 8
+ 210 0020 0123     		movs	r3, #1
+  27:../../shared/firmware/Src/pid.c **** 	data->lastInput = data->input;
+ 211              		.loc 1 27 0 discriminator 8
+ 212 0022 2562     		str	r5, [r4, #32]	@ float
+  28:../../shared/firmware/Src/pid.c **** 	data->lastInput = data->input;
+ 213              		.loc 1 28 0 discriminator 8
+ 214 0024 E262     		str	r2, [r4, #44]	@ float
+ 215              		.loc 1 29 0 discriminator 8
+ 216 0026 84F83030 		strb	r3, [r4, #48]
+ 217 002a 70BD     		pop	{r4, r5, r6, pc}
+ 218              	.LVL23:
+ 219              	.L13:
+  27:../../shared/firmware/Src/pid.c **** 	data->lastInput = data->input;
+ 220              		.loc 1 27 0
+ 221 002c 3546     		mov	r5, r6
+ 222 002e F6E7     		b	.L11
+ 223              		.cfi_endproc
+ 224              	.LFE64:
+ 226              		.section	.text.pidStop,"ax",%progbits
+ 227              		.align	2
+ 228              		.global	pidStop
+ 229              		.thumb
+ 230              		.thumb_func
+ 232              	pidStop:
+ 233              	.LFB65:
+  30:../../shared/firmware/Src/pid.c **** }
+  31:../../shared/firmware/Src/pid.c **** 
+ARM GAS  /tmp/ccoxpnr8.s 			page 6
+
+
+  32:../../shared/firmware/Src/pid.c **** void pidStop(PidData* data)
+  33:../../shared/firmware/Src/pid.c **** {
+ 234              		.loc 1 33 0
+ 235              		.cfi_startproc
+ 236              		@ args = 0, pretend = 0, frame = 0
+ 237              		@ frame_needed = 0, uses_anonymous_args = 0
+ 238              		@ link register save eliminated.
+ 239              	.LVL24:
+  34:../../shared/firmware/Src/pid.c **** 	data->on = false;
+ 240              		.loc 1 34 0
+ 241 0000 0023     		movs	r3, #0
+ 242 0002 80F83030 		strb	r3, [r0, #48]
+ 243 0006 7047     		bx	lr
+ 244              		.cfi_endproc
+ 245              	.LFE65:
+ 247              		.text
+ 248              	.Letext0:
+ 249              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 250              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 251              		.file 4 "../../shared/firmware/Inc/pid.h"
+ 252              		.file 5 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 253              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ARM GAS  /tmp/ccoxpnr8.s 			page 7
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 pid.c
+     /tmp/ccoxpnr8.s:24     .text.pidCompute:0000000000000000 $t
+     /tmp/ccoxpnr8.s:29     .text.pidCompute:0000000000000000 pidCompute
+     /tmp/ccoxpnr8.s:167    .text.pidStart:0000000000000000 $t
+     /tmp/ccoxpnr8.s:172    .text.pidStart:0000000000000000 pidStart
+     /tmp/ccoxpnr8.s:227    .text.pidStop:0000000000000000 $t
+     /tmp/ccoxpnr8.s:232    .text.pidStop:0000000000000000 pidStop
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+__aeabi_fsub
+__aeabi_fmul
+__aeabi_fadd
+__aeabi_fcmpgt
+__aeabi_fcmplt
+HAL_GetTick

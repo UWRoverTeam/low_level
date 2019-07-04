@@ -1,0 +1,312 @@
+ARM GAS  /tmp/ccQA2JLw.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"pid.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.global	__aeabi_fsub
+  19              		.global	__aeabi_fmul
+  20              		.global	__aeabi_fadd
+  21              		.global	__aeabi_fcmpgt
+  22              		.global	__aeabi_fcmplt
+  23              		.section	.text.pidCompute,"ax",%progbits
+  24              		.align	2
+  25              		.global	pidCompute
+  26              		.thumb
+  27              		.thumb_func
+  29              	pidCompute:
+  30              	.LFB63:
+  31              		.file 1 "../../shared/firmware/Src/pid.c"
+   1:../../shared/firmware/Src/pid.c **** #include "pid.h"
+   2:../../shared/firmware/Src/pid.c **** 
+   3:../../shared/firmware/Src/pid.c **** bool pidCompute(PidData* data)
+   4:../../shared/firmware/Src/pid.c **** {
+  32              		.loc 1 4 0
+  33              		.cfi_startproc
+  34              		@ args = 0, pretend = 0, frame = 0
+  35              		@ frame_needed = 0, uses_anonymous_args = 0
+  36              	.LVL0:
+  37 0000 2DE9F047 		push	{r4, r5, r6, r7, r8, r9, r10, lr}
+  38              	.LCFI0:
+  39              		.cfi_def_cfa_offset 32
+  40              		.cfi_offset 4, -32
+  41              		.cfi_offset 5, -28
+  42              		.cfi_offset 6, -24
+  43              		.cfi_offset 7, -20
+  44              		.cfi_offset 8, -16
+  45              		.cfi_offset 9, -12
+  46              		.cfi_offset 10, -8
+  47              		.cfi_offset 14, -4
+   5:../../shared/firmware/Src/pid.c **** 	if (!data->on)
+  48              		.loc 1 5 0
+  49 0004 90F83050 		ldrb	r5, [r0, #48]	@ zero_extendqisi2
+  50 0008 002D     		cmp	r5, #0
+  51 000a 53D0     		beq	.L2
+  52 000c 0446     		mov	r4, r0
+   6:../../shared/firmware/Src/pid.c **** 		return false;
+ARM GAS  /tmp/ccQA2JLw.s 			page 2
+
+
+   7:../../shared/firmware/Src/pid.c **** 	uint32_t now = HAL_GetTick();
+  53              		.loc 1 7 0
+  54 000e FFF7FEFF 		bl	HAL_GetTick
+  55              	.LVL1:
+   8:../../shared/firmware/Src/pid.c **** 	if (now < data->lastCompute + data->period)
+  56              		.loc 1 8 0
+  57 0012 626A     		ldr	r2, [r4, #36]
+  58 0014 A36A     		ldr	r3, [r4, #40]
+  59 0016 1344     		add	r3, r3, r2
+  60 0018 8342     		cmp	r3, r0
+  61 001a 4AD8     		bhi	.L9
+   9:../../shared/firmware/Src/pid.c **** 		return false;
+  10:../../shared/firmware/Src/pid.c **** 	data->lastCompute = now;
+  62              		.loc 1 10 0
+  63 001c 6062     		str	r0, [r4, #36]
+  11:../../shared/firmware/Src/pid.c **** 
+  12:../../shared/firmware/Src/pid.c **** 	float error = data->setpoint - data->input;
+  64              		.loc 1 12 0
+  65 001e D4F80C80 		ldr	r8, [r4, #12]	@ float
+  66 0022 2069     		ldr	r0, [r4, #16]	@ float
+  67              	.LVL2:
+  68 0024 4146     		mov	r1, r8
+  69 0026 FFF7FEFF 		bl	__aeabi_fsub
+  70              	.LVL3:
+  71 002a 8146     		mov	r9, r0
+  72              	.LVL4:
+  13:../../shared/firmware/Src/pid.c **** 
+  14:../../shared/firmware/Src/pid.c **** 	data->integral += (data->Ki * error);
+  73              		.loc 1 14 0
+  74 002c 6068     		ldr	r0, [r4, #4]	@ float
+  75              	.LVL5:
+  76 002e 4946     		mov	r1, r9
+  77 0030 FFF7FEFF 		bl	__aeabi_fmul
+  78              	.LVL6:
+  79 0034 216A     		ldr	r1, [r4, #32]	@ float
+  80 0036 FFF7FEFF 		bl	__aeabi_fadd
+  81              	.LVL7:
+  82 003a 0646     		mov	r6, r0
+  83 003c 2062     		str	r0, [r4, #32]	@ float
+  15:../../shared/firmware/Src/pid.c **** 	data->integral = CLAMP_VALUE(data->integral, data->outputMin, data->outputMax);
+  84              		.loc 1 15 0
+  85 003e A769     		ldr	r7, [r4, #24]	@ float
+  86 0040 3946     		mov	r1, r7
+  87 0042 FFF7FEFF 		bl	__aeabi_fcmpgt
+  88              	.LVL8:
+  89 0046 40B9     		cbnz	r0, .L10
+  90              		.loc 1 15 0 is_stmt 0 discriminator 2
+  91 0048 D4F81CA0 		ldr	r10, [r4, #28]	@ float
+  92 004c 3046     		mov	r0, r6
+  93 004e 5146     		mov	r1, r10
+  94 0050 FFF7FEFF 		bl	__aeabi_fcmplt
+  95              	.LVL9:
+  96 0054 10B1     		cbz	r0, .L3
+  97              		.loc 1 15 0
+  98 0056 5646     		mov	r6, r10
+  99 0058 00E0     		b	.L3
+ 100              	.L10:
+ARM GAS  /tmp/ccQA2JLw.s 			page 3
+
+
+ 101 005a 3E46     		mov	r6, r7
+ 102              	.L3:
+ 103              		.loc 1 15 0 discriminator 8
+ 104 005c 2662     		str	r6, [r4, #32]	@ float
+  16:../../shared/firmware/Src/pid.c **** 
+  17:../../shared/firmware/Src/pid.c **** 	data->output = (data->Kp * error) + data->integral - (data->Kd * (data->input - data->lastInput));
+ 105              		.loc 1 17 0 is_stmt 1 discriminator 8
+ 106 005e 2068     		ldr	r0, [r4]	@ float
+ 107 0060 4946     		mov	r1, r9
+ 108 0062 FFF7FEFF 		bl	__aeabi_fmul
+ 109              	.LVL10:
+ 110 0066 0146     		mov	r1, r0
+ 111 0068 3046     		mov	r0, r6
+ 112 006a FFF7FEFF 		bl	__aeabi_fadd
+ 113              	.LVL11:
+ 114 006e 0646     		mov	r6, r0
+ 115 0070 D4F80890 		ldr	r9, [r4, #8]	@ float
+ 116              	.LVL12:
+ 117 0074 4046     		mov	r0, r8
+ 118 0076 E16A     		ldr	r1, [r4, #44]	@ float
+ 119 0078 FFF7FEFF 		bl	__aeabi_fsub
+ 120              	.LVL13:
+ 121 007c 0146     		mov	r1, r0
+ 122 007e 4846     		mov	r0, r9
+ 123 0080 FFF7FEFF 		bl	__aeabi_fmul
+ 124              	.LVL14:
+ 125 0084 0146     		mov	r1, r0
+ 126 0086 3046     		mov	r0, r6
+ 127 0088 FFF7FEFF 		bl	__aeabi_fsub
+ 128              	.LVL15:
+ 129 008c 0646     		mov	r6, r0
+ 130 008e 6061     		str	r0, [r4, #20]	@ float
+  18:../../shared/firmware/Src/pid.c **** 	data->output = CLAMP_VALUE(data->output, data->outputMin, data->outputMax);
+ 131              		.loc 1 18 0 discriminator 8
+ 132 0090 3846     		mov	r0, r7
+ 133 0092 3146     		mov	r1, r6
+ 134 0094 FFF7FEFF 		bl	__aeabi_fcmplt
+ 135              	.LVL16:
+ 136 0098 38B9     		cbnz	r0, .L6
+ 137              		.loc 1 18 0 is_stmt 0 discriminator 2
+ 138 009a E769     		ldr	r7, [r4, #28]	@ float
+ 139 009c 3046     		mov	r0, r6
+ 140 009e 3946     		mov	r1, r7
+ 141 00a0 FFF7FEFF 		bl	__aeabi_fcmplt
+ 142              	.LVL17:
+ 143 00a4 00B1     		cbz	r0, .L7
+ 144              		.loc 1 18 0
+ 145 00a6 3E46     		mov	r6, r7
+ 146              	.L7:
+ 147              		.loc 1 18 0 discriminator 7
+ 148 00a8 3746     		mov	r7, r6
+ 149              	.L6:
+ 150              		.loc 1 18 0 discriminator 8
+ 151 00aa 6761     		str	r7, [r4, #20]	@ float
+  19:../../shared/firmware/Src/pid.c **** 
+  20:../../shared/firmware/Src/pid.c **** 	data->lastInput = data->input;
+ 152              		.loc 1 20 0 is_stmt 1 discriminator 8
+ARM GAS  /tmp/ccQA2JLw.s 			page 4
+
+
+ 153 00ac C4F82C80 		str	r8, [r4, #44]	@ float
+  21:../../shared/firmware/Src/pid.c **** 	return true;
+ 154              		.loc 1 21 0 discriminator 8
+ 155 00b0 00E0     		b	.L2
+ 156              	.LVL18:
+ 157              	.L9:
+   9:../../shared/firmware/Src/pid.c **** 	data->lastCompute = now;
+ 158              		.loc 1 9 0
+ 159 00b2 0025     		movs	r5, #0
+ 160              	.LVL19:
+ 161              	.L2:
+  22:../../shared/firmware/Src/pid.c **** }
+ 162              		.loc 1 22 0
+ 163 00b4 2846     		mov	r0, r5
+ 164 00b6 BDE8F087 		pop	{r4, r5, r6, r7, r8, r9, r10, pc}
+ 165              		.cfi_endproc
+ 166              	.LFE63:
+ 168 00ba 00BF     		.section	.text.pidStart,"ax",%progbits
+ 169              		.align	2
+ 170              		.global	pidStart
+ 171              		.thumb
+ 172              		.thumb_func
+ 174              	pidStart:
+ 175              	.LFB64:
+  23:../../shared/firmware/Src/pid.c **** 
+  24:../../shared/firmware/Src/pid.c **** void pidStart(PidData* data)
+  25:../../shared/firmware/Src/pid.c **** {
+ 176              		.loc 1 25 0
+ 177              		.cfi_startproc
+ 178              		@ args = 0, pretend = 0, frame = 0
+ 179              		@ frame_needed = 0, uses_anonymous_args = 0
+ 180              	.LVL20:
+ 181 0000 70B5     		push	{r4, r5, r6, lr}
+ 182              	.LCFI1:
+ 183              		.cfi_def_cfa_offset 16
+ 184              		.cfi_offset 4, -16
+ 185              		.cfi_offset 5, -12
+ 186              		.cfi_offset 6, -8
+ 187              		.cfi_offset 14, -4
+ 188 0002 0446     		mov	r4, r0
+  26:../../shared/firmware/Src/pid.c **** 	data->integral = data->output;
+ 189              		.loc 1 26 0
+ 190 0004 4669     		ldr	r6, [r0, #20]	@ float
+ 191 0006 0662     		str	r6, [r0, #32]	@ float
+  27:../../shared/firmware/Src/pid.c **** 	data->integral = CLAMP_VALUE(data->integral, data->outputMin, data->outputMax);
+ 192              		.loc 1 27 0
+ 193 0008 8569     		ldr	r5, [r0, #24]	@ float
+ 194 000a 3046     		mov	r0, r6
+ 195              	.LVL21:
+ 196 000c 2946     		mov	r1, r5
+ 197 000e FFF7FEFF 		bl	__aeabi_fcmpgt
+ 198              	.LVL22:
+ 199 0012 30B9     		cbnz	r0, .L15
+ 200              		.loc 1 27 0 is_stmt 0 discriminator 2
+ 201 0014 E569     		ldr	r5, [r4, #28]	@ float
+ 202 0016 3046     		mov	r0, r6
+ 203 0018 2946     		mov	r1, r5
+ARM GAS  /tmp/ccQA2JLw.s 			page 5
+
+
+ 204 001a FFF7FEFF 		bl	__aeabi_fcmplt
+ 205              	.LVL23:
+ 206 001e 00B9     		cbnz	r0, .L15
+ 207 0020 3546     		mov	r5, r6
+ 208              	.L15:
+ 209              		.loc 1 27 0 discriminator 8
+ 210 0022 2562     		str	r5, [r4, #32]	@ float
+  28:../../shared/firmware/Src/pid.c **** 	data->lastInput = data->input;
+ 211              		.loc 1 28 0 is_stmt 1 discriminator 8
+ 212 0024 E368     		ldr	r3, [r4, #12]	@ float
+ 213 0026 E362     		str	r3, [r4, #44]	@ float
+  29:../../shared/firmware/Src/pid.c **** 	data->on = true;
+ 214              		.loc 1 29 0 discriminator 8
+ 215 0028 0123     		movs	r3, #1
+ 216 002a 84F83030 		strb	r3, [r4, #48]
+ 217 002e 70BD     		pop	{r4, r5, r6, pc}
+ 218              		.cfi_endproc
+ 219              	.LFE64:
+ 221              		.section	.text.pidStop,"ax",%progbits
+ 222              		.align	2
+ 223              		.global	pidStop
+ 224              		.thumb
+ 225              		.thumb_func
+ 227              	pidStop:
+ 228              	.LFB65:
+  30:../../shared/firmware/Src/pid.c **** }
+  31:../../shared/firmware/Src/pid.c **** 
+  32:../../shared/firmware/Src/pid.c **** void pidStop(PidData* data)
+  33:../../shared/firmware/Src/pid.c **** {
+ 229              		.loc 1 33 0
+ 230              		.cfi_startproc
+ 231              		@ args = 0, pretend = 0, frame = 0
+ 232              		@ frame_needed = 0, uses_anonymous_args = 0
+ 233              		@ link register save eliminated.
+ 234              	.LVL24:
+  34:../../shared/firmware/Src/pid.c **** 	data->on = false;
+ 235              		.loc 1 34 0
+ 236 0000 0023     		movs	r3, #0
+ 237 0002 80F83030 		strb	r3, [r0, #48]
+ 238 0006 7047     		bx	lr
+ 239              		.cfi_endproc
+ 240              	.LFE65:
+ 242              		.text
+ 243              	.Letext0:
+ 244              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 245              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 246              		.file 4 "../../shared/firmware/Inc/pid.h"
+ 247              		.file 5 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 248              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ARM GAS  /tmp/ccQA2JLw.s 			page 6
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 pid.c
+     /tmp/ccQA2JLw.s:24     .text.pidCompute:0000000000000000 $t
+     /tmp/ccQA2JLw.s:29     .text.pidCompute:0000000000000000 pidCompute
+     /tmp/ccQA2JLw.s:169    .text.pidStart:0000000000000000 $t
+     /tmp/ccQA2JLw.s:174    .text.pidStart:0000000000000000 pidStart
+     /tmp/ccQA2JLw.s:222    .text.pidStop:0000000000000000 $t
+     /tmp/ccQA2JLw.s:227    .text.pidStop:0000000000000000 pidStop
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+__aeabi_fsub
+__aeabi_fmul
+__aeabi_fadd
+__aeabi_fcmpgt
+__aeabi_fcmplt
+HAL_GetTick

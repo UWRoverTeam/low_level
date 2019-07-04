@@ -1,0 +1,211 @@
+ARM GAS  /tmp/ccdaa1GB.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"globals.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.led,"ax",%progbits
+  19              		.align	2
+  20              		.global	led
+  21              		.thumb
+  22              		.thumb_func
+  24              	led:
+  25              	.LFB63:
+  26              		.file 1 "../../shared/firmware/Src/globals.c"
+   1:../../shared/firmware/Src/globals.c **** #include "globals.h"
+   2:../../shared/firmware/Src/globals.c **** 
+   3:../../shared/firmware/Src/globals.c **** CAN_HandleTypeDef *can1Handle;
+   4:../../shared/firmware/Src/globals.c **** CAN_HandleTypeDef *can2Handle;
+   5:../../shared/firmware/Src/globals.c **** 
+   6:../../shared/firmware/Src/globals.c **** void led(uint8_t n, uint8_t state)
+   7:../../shared/firmware/Src/globals.c **** {
+  27              		.loc 1 7 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              	.LVL0:
+  32 0000 08B5     		push	{r3, lr}
+  33              	.LCFI0:
+  34              		.cfi_def_cfa_offset 8
+  35              		.cfi_offset 3, -8
+  36              		.cfi_offset 14, -4
+  37 0002 0A46     		mov	r2, r1
+   8:../../shared/firmware/Src/globals.c **** 	if (n == 1)
+  38              		.loc 1 8 0
+  39 0004 0128     		cmp	r0, #1
+  40 0006 07D1     		bne	.L2
+   9:../../shared/firmware/Src/globals.c **** 		HAL_GPIO_WritePin(LED1_GPIO_Port, LED1_Pin, !state);
+  41              		.loc 1 9 0
+  42 0008 0E48     		ldr	r0, .L6
+  43              	.LVL1:
+  44 000a 4021     		movs	r1, #64
+  45              	.LVL2:
+  46 000c B2FA82F2 		clz	r2, r2
+  47 0010 5209     		lsrs	r2, r2, #5
+  48 0012 FFF7FEFF 		bl	HAL_GPIO_WritePin
+  49              	.LVL3:
+ARM GAS  /tmp/ccdaa1GB.s 			page 2
+
+
+  50 0016 08BD     		pop	{r3, pc}
+  51              	.LVL4:
+  52              	.L2:
+  10:../../shared/firmware/Src/globals.c **** 	else if (n == 2)
+  53              		.loc 1 10 0
+  54 0018 0228     		cmp	r0, #2
+  55 001a 07D1     		bne	.L4
+  11:../../shared/firmware/Src/globals.c **** 		HAL_GPIO_WritePin(LED2_GPIO_Port, LED2_Pin, !state);
+  56              		.loc 1 11 0
+  57 001c 0948     		ldr	r0, .L6
+  58              	.LVL5:
+  59 001e 8021     		movs	r1, #128
+  60              	.LVL6:
+  61 0020 B2FA82F2 		clz	r2, r2
+  62 0024 5209     		lsrs	r2, r2, #5
+  63 0026 FFF7FEFF 		bl	HAL_GPIO_WritePin
+  64              	.LVL7:
+  65 002a 08BD     		pop	{r3, pc}
+  66              	.LVL8:
+  67              	.L4:
+  12:../../shared/firmware/Src/globals.c **** 	else if (n == 3)
+  68              		.loc 1 12 0
+  69 002c 0328     		cmp	r0, #3
+  70 002e 07D1     		bne	.L1
+  13:../../shared/firmware/Src/globals.c **** 		HAL_GPIO_WritePin(LED3_GPIO_Port, LED3_Pin, !state);
+  71              		.loc 1 13 0
+  72 0030 0448     		ldr	r0, .L6
+  73              	.LVL9:
+  74 0032 4FF48071 		mov	r1, #256
+  75              	.LVL10:
+  76 0036 B2FA82F2 		clz	r2, r2
+  77 003a 5209     		lsrs	r2, r2, #5
+  78 003c FFF7FEFF 		bl	HAL_GPIO_WritePin
+  79              	.LVL11:
+  80              	.L1:
+  81 0040 08BD     		pop	{r3, pc}
+  82              	.L7:
+  83 0042 00BF     		.align	2
+  84              	.L6:
+  85 0044 00100140 		.word	1073811456
+  86              		.cfi_endproc
+  87              	.LFE63:
+  89              		.section	.text.blink,"ax",%progbits
+  90              		.align	2
+  91              		.global	blink
+  92              		.thumb
+  93              		.thumb_func
+  95              	blink:
+  96              	.LFB64:
+  14:../../shared/firmware/Src/globals.c **** }
+  15:../../shared/firmware/Src/globals.c **** 
+  16:../../shared/firmware/Src/globals.c **** void blink(uint8_t l, int n)
+  17:../../shared/firmware/Src/globals.c **** {
+  97              		.loc 1 17 0
+  98              		.cfi_startproc
+  99              		@ args = 0, pretend = 0, frame = 0
+ 100              		@ frame_needed = 0, uses_anonymous_args = 0
+ARM GAS  /tmp/ccdaa1GB.s 			page 3
+
+
+ 101              	.LVL12:
+ 102 0000 70B5     		push	{r4, r5, r6, lr}
+ 103              	.LCFI1:
+ 104              		.cfi_def_cfa_offset 16
+ 105              		.cfi_offset 4, -16
+ 106              		.cfi_offset 5, -12
+ 107              		.cfi_offset 6, -8
+ 108              		.cfi_offset 14, -4
+ 109 0002 0546     		mov	r5, r0
+ 110 0004 0E46     		mov	r6, r1
+ 111              	.LVL13:
+ 112              	.LBB2:
+  18:../../shared/firmware/Src/globals.c **** 	for (int i = 0; i < n; ++i) {
+ 113              		.loc 1 18 0
+ 114 0006 0024     		movs	r4, #0
+ 115 0008 0EE0     		b	.L9
+ 116              	.LVL14:
+ 117              	.L10:
+  19:../../shared/firmware/Src/globals.c **** 		led(l, 1);
+ 118              		.loc 1 19 0 discriminator 3
+ 119 000a 2846     		mov	r0, r5
+ 120 000c 0121     		movs	r1, #1
+ 121 000e FFF7FEFF 		bl	led
+ 122              	.LVL15:
+  20:../../shared/firmware/Src/globals.c **** 		HAL_Delay(20);
+ 123              		.loc 1 20 0 discriminator 3
+ 124 0012 1420     		movs	r0, #20
+ 125 0014 FFF7FEFF 		bl	HAL_Delay
+ 126              	.LVL16:
+  21:../../shared/firmware/Src/globals.c **** 		led(l, 0);
+ 127              		.loc 1 21 0 discriminator 3
+ 128 0018 2846     		mov	r0, r5
+ 129 001a 0021     		movs	r1, #0
+ 130 001c FFF7FEFF 		bl	led
+ 131              	.LVL17:
+  22:../../shared/firmware/Src/globals.c **** 		HAL_Delay(200);
+ 132              		.loc 1 22 0 discriminator 3
+ 133 0020 C820     		movs	r0, #200
+ 134 0022 FFF7FEFF 		bl	HAL_Delay
+ 135              	.LVL18:
+  18:../../shared/firmware/Src/globals.c **** 		led(l, 1);
+ 136              		.loc 1 18 0 discriminator 3
+ 137 0026 0134     		adds	r4, r4, #1
+ 138              	.LVL19:
+ 139              	.L9:
+  18:../../shared/firmware/Src/globals.c **** 		led(l, 1);
+ 140              		.loc 1 18 0 is_stmt 0 discriminator 1
+ 141 0028 B442     		cmp	r4, r6
+ 142 002a EEDB     		blt	.L10
+ 143              	.LBE2:
+  23:../../shared/firmware/Src/globals.c **** 	}
+  24:../../shared/firmware/Src/globals.c **** }
+ 144              		.loc 1 24 0 is_stmt 1
+ 145 002c 70BD     		pop	{r4, r5, r6, pc}
+ 146              		.cfi_endproc
+ 147              	.LFE64:
+ 149              		.comm	can2Handle,4,4
+ARM GAS  /tmp/ccdaa1GB.s 			page 4
+
+
+ 150              		.comm	can1Handle,4,4
+ 151 002e 00BF     		.text
+ 152              	.Letext0:
+ 153              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 154              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 155              		.file 4 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 156              		.file 5 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 157              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_gpio.h"
+ 158              		.file 7 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_can.h"
+ 159              		.file 8 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 160              		.file 9 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ARM GAS  /tmp/ccdaa1GB.s 			page 5
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 globals.c
+     /tmp/ccdaa1GB.s:19     .text.led:0000000000000000 $t
+     /tmp/ccdaa1GB.s:24     .text.led:0000000000000000 led
+     /tmp/ccdaa1GB.s:85     .text.led:0000000000000044 $d
+     /tmp/ccdaa1GB.s:90     .text.blink:0000000000000000 $t
+     /tmp/ccdaa1GB.s:95     .text.blink:0000000000000000 blink
+                            *COM*:0000000000000004 can2Handle
+                            *COM*:0000000000000004 can1Handle
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+HAL_GPIO_WritePin
+HAL_Delay

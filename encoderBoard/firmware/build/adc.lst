@@ -1,0 +1,249 @@
+ARM GAS  /tmp/ccgtzq1U.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"adc.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.HAL_ADC_ConvCpltCallback,"ax",%progbits
+  19              		.align	2
+  20              		.global	HAL_ADC_ConvCpltCallback
+  21              		.thumb
+  22              		.thumb_func
+  24              	HAL_ADC_ConvCpltCallback:
+  25              	.LFB63:
+  26              		.file 1 "Src/adc.c"
+   1:Src/adc.c     **** #include "adc.h"
+   2:Src/adc.c     **** 
+   3:Src/adc.c     **** static uint16_t measured1;
+   4:Src/adc.c     **** volatile static bool complete1;
+   5:Src/adc.c     **** 
+   6:Src/adc.c     **** void HAL_ADC_ConvCpltCallback(ADC_HandleTypeDef* hadc)
+   7:Src/adc.c     **** {
+  27              		.loc 1 7 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              		@ link register save eliminated.
+  32              	.LVL0:
+   8:Src/adc.c     **** 	if (hadc == adc1Handle)
+  33              		.loc 1 8 0
+  34 0000 034B     		ldr	r3, .L3
+  35 0002 1B68     		ldr	r3, [r3]
+  36 0004 8342     		cmp	r3, r0
+  37 0006 02D1     		bne	.L1
+   9:Src/adc.c     **** 		complete1 = true;
+  38              		.loc 1 9 0
+  39 0008 0122     		movs	r2, #1
+  40 000a 024B     		ldr	r3, .L3+4
+  41 000c 1A70     		strb	r2, [r3]
+  42              	.L1:
+  43 000e 7047     		bx	lr
+  44              	.L4:
+  45              		.align	2
+  46              	.L3:
+  47 0010 00000000 		.word	adc1Handle
+  48 0014 00000000 		.word	.LANCHOR0
+  49              		.cfi_endproc
+ARM GAS  /tmp/ccgtzq1U.s 			page 2
+
+
+  50              	.LFE63:
+  52              		.section	.text.adcInit,"ax",%progbits
+  53              		.align	2
+  54              		.global	adcInit
+  55              		.thumb
+  56              		.thumb_func
+  58              	adcInit:
+  59              	.LFB64:
+  10:Src/adc.c     **** }
+  11:Src/adc.c     **** 
+  12:Src/adc.c     **** void adcInit()
+  13:Src/adc.c     **** {
+  60              		.loc 1 13 0
+  61              		.cfi_startproc
+  62              		@ args = 0, pretend = 0, frame = 0
+  63              		@ frame_needed = 0, uses_anonymous_args = 0
+  64 0000 08B5     		push	{r3, lr}
+  65              	.LCFI0:
+  66              		.cfi_def_cfa_offset 8
+  67              		.cfi_offset 3, -8
+  68              		.cfi_offset 14, -4
+  14:Src/adc.c     **** 	HAL_ADC_Start_IT(adc1Handle);
+  69              		.loc 1 14 0
+  70 0002 024B     		ldr	r3, .L7
+  71 0004 1868     		ldr	r0, [r3]
+  72 0006 FFF7FEFF 		bl	HAL_ADC_Start_IT
+  73              	.LVL1:
+  74 000a 08BD     		pop	{r3, pc}
+  75              	.L8:
+  76              		.align	2
+  77              	.L7:
+  78 000c 00000000 		.word	adc1Handle
+  79              		.cfi_endproc
+  80              	.LFE64:
+  82              		.section	.text.adcUpdate,"ax",%progbits
+  83              		.align	2
+  84              		.global	adcUpdate
+  85              		.thumb
+  86              		.thumb_func
+  88              	adcUpdate:
+  89              	.LFB65:
+  15:Src/adc.c     **** }
+  16:Src/adc.c     **** 
+  17:Src/adc.c     **** int adcUpdate()
+  18:Src/adc.c     **** {
+  90              		.loc 1 18 0
+  91              		.cfi_startproc
+  92              		@ args = 0, pretend = 0, frame = 0
+  93              		@ frame_needed = 0, uses_anonymous_args = 0
+  94              	.LVL2:
+  19:Src/adc.c     **** 	int ret = 0;
+  20:Src/adc.c     **** 	if (complete1) {
+  95              		.loc 1 20 0
+  96 0000 0A4B     		ldr	r3, .L14
+  97 0002 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+  98 0004 13F0FF0F 		tst	r3, #255
+  99 0008 0ED0     		beq	.L11
+ARM GAS  /tmp/ccgtzq1U.s 			page 3
+
+
+  18:Src/adc.c     **** 	int ret = 0;
+ 100              		.loc 1 18 0
+ 101 000a 10B5     		push	{r4, lr}
+ 102              	.LCFI1:
+ 103              		.cfi_def_cfa_offset 8
+ 104              		.cfi_offset 4, -8
+ 105              		.cfi_offset 14, -4
+  21:Src/adc.c     **** 		complete1 = false;
+ 106              		.loc 1 21 0
+ 107 000c 0022     		movs	r2, #0
+ 108 000e 074B     		ldr	r3, .L14
+ 109 0010 1A70     		strb	r2, [r3]
+  22:Src/adc.c     **** 		measured1 = HAL_ADC_GetValue(adc1Handle);
+ 110              		.loc 1 22 0
+ 111 0012 074C     		ldr	r4, .L14+4
+ 112 0014 2068     		ldr	r0, [r4]
+ 113 0016 FFF7FEFF 		bl	HAL_ADC_GetValue
+ 114              	.LVL3:
+ 115 001a 064B     		ldr	r3, .L14+8
+ 116 001c 1880     		strh	r0, [r3]	@ movhi
+  23:Src/adc.c     **** 		HAL_ADC_Start_IT(adc1Handle);
+ 117              		.loc 1 23 0
+ 118 001e 2068     		ldr	r0, [r4]
+ 119 0020 FFF7FEFF 		bl	HAL_ADC_Start_IT
+ 120              	.LVL4:
+  24:Src/adc.c     **** 		ret += 1;
+ 121              		.loc 1 24 0
+ 122 0024 0120     		movs	r0, #1
+ 123 0026 10BD     		pop	{r4, pc}
+ 124              	.LVL5:
+ 125              	.L11:
+ 126              	.LCFI2:
+ 127              		.cfi_def_cfa_offset 0
+ 128              		.cfi_restore 4
+ 129              		.cfi_restore 14
+  19:Src/adc.c     **** 	if (complete1) {
+ 130              		.loc 1 19 0
+ 131 0028 0020     		movs	r0, #0
+ 132 002a 7047     		bx	lr
+ 133              	.L15:
+ 134              		.align	2
+ 135              	.L14:
+ 136 002c 00000000 		.word	.LANCHOR0
+ 137 0030 00000000 		.word	adc1Handle
+ 138 0034 00000000 		.word	.LANCHOR1
+ 139              		.cfi_endproc
+ 140              	.LFE65:
+ 142              		.section	.text.adcGet1,"ax",%progbits
+ 143              		.align	2
+ 144              		.global	adcGet1
+ 145              		.thumb
+ 146              		.thumb_func
+ 148              	adcGet1:
+ 149              	.LFB66:
+  25:Src/adc.c     **** 	}
+  26:Src/adc.c     **** 	return ret;
+  27:Src/adc.c     **** }
+ARM GAS  /tmp/ccgtzq1U.s 			page 4
+
+
+  28:Src/adc.c     **** 
+  29:Src/adc.c     **** uint16_t adcGet1()
+  30:Src/adc.c     **** {
+ 150              		.loc 1 30 0
+ 151              		.cfi_startproc
+ 152              		@ args = 0, pretend = 0, frame = 0
+ 153              		@ frame_needed = 0, uses_anonymous_args = 0
+ 154              		@ link register save eliminated.
+  31:Src/adc.c     **** 	return measured1;
+  32:Src/adc.c     **** }
+ 155              		.loc 1 32 0
+ 156 0000 014B     		ldr	r3, .L17
+ 157 0002 1888     		ldrh	r0, [r3]
+ 158 0004 7047     		bx	lr
+ 159              	.L18:
+ 160 0006 00BF     		.align	2
+ 161              	.L17:
+ 162 0008 00000000 		.word	.LANCHOR1
+ 163              		.cfi_endproc
+ 164              	.LFE66:
+ 166              		.section	.bss.measured1,"aw",%nobits
+ 167              		.align	1
+ 168              		.set	.LANCHOR1,. + 0
+ 171              	measured1:
+ 172 0000 0000     		.space	2
+ 173              		.section	.bss.complete1,"aw",%nobits
+ 174              		.set	.LANCHOR0,. + 0
+ 177              	complete1:
+ 178 0000 00       		.space	1
+ 179              		.text
+ 180              	.Letext0:
+ 181              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 182              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 183              		.file 4 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 184              		.file 5 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 185              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 186              		.file 7 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_adc.h"
+ 187              		.file 8 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 188              		.file 9 "Inc/handles.h"
+ARM GAS  /tmp/ccgtzq1U.s 			page 5
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 adc.c
+     /tmp/ccgtzq1U.s:19     .text.HAL_ADC_ConvCpltCallback:0000000000000000 $t
+     /tmp/ccgtzq1U.s:24     .text.HAL_ADC_ConvCpltCallback:0000000000000000 HAL_ADC_ConvCpltCallback
+     /tmp/ccgtzq1U.s:47     .text.HAL_ADC_ConvCpltCallback:0000000000000010 $d
+     /tmp/ccgtzq1U.s:53     .text.adcInit:0000000000000000 $t
+     /tmp/ccgtzq1U.s:58     .text.adcInit:0000000000000000 adcInit
+     /tmp/ccgtzq1U.s:78     .text.adcInit:000000000000000c $d
+     /tmp/ccgtzq1U.s:83     .text.adcUpdate:0000000000000000 $t
+     /tmp/ccgtzq1U.s:88     .text.adcUpdate:0000000000000000 adcUpdate
+     /tmp/ccgtzq1U.s:136    .text.adcUpdate:000000000000002c $d
+     /tmp/ccgtzq1U.s:143    .text.adcGet1:0000000000000000 $t
+     /tmp/ccgtzq1U.s:148    .text.adcGet1:0000000000000000 adcGet1
+     /tmp/ccgtzq1U.s:162    .text.adcGet1:0000000000000008 $d
+     /tmp/ccgtzq1U.s:167    .bss.measured1:0000000000000000 $d
+     /tmp/ccgtzq1U.s:171    .bss.measured1:0000000000000000 measured1
+     /tmp/ccgtzq1U.s:177    .bss.complete1:0000000000000000 complete1
+     /tmp/ccgtzq1U.s:178    .bss.complete1:0000000000000000 $d
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+adc1Handle
+HAL_ADC_Start_IT
+HAL_ADC_GetValue

@@ -1,0 +1,2403 @@
+ARM GAS  /tmp/ccAE1LFE.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 2
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"usrMain.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.BNO055_I2C_bus_write,"ax",%progbits
+  19              		.align	2
+  20              		.global	BNO055_I2C_bus_write
+  21              		.thumb
+  22              		.thumb_func
+  24              	BNO055_I2C_bus_write:
+  25              	.LFB66:
+  26              		.file 1 "Inc/bno055_support.h"
+   1:Inc/bno055_support.h **** /*
+   2:Inc/bno055_support.h **** ****************************************************************************
+   3:Inc/bno055_support.h **** * Copyright (C) 2015 - 2016 Bosch Sensortec GmbH
+   4:Inc/bno055_support.h **** *
+   5:Inc/bno055_support.h **** * bno055_support.c
+   6:Inc/bno055_support.h **** * Date: 2016/03/14
+   7:Inc/bno055_support.h **** * Revision: 1.0.4 $
+   8:Inc/bno055_support.h **** *
+   9:Inc/bno055_support.h **** * Usage: Sensor Driver support file for BNO055 sensor
+  10:Inc/bno055_support.h **** *
+  11:Inc/bno055_support.h **** ****************************************************************************
+  12:Inc/bno055_support.h **** * License:
+  13:Inc/bno055_support.h **** *
+  14:Inc/bno055_support.h **** * Redistribution and use in source and binary forms, with or without
+  15:Inc/bno055_support.h **** * modification, are permitted provided that the following conditions are met:
+  16:Inc/bno055_support.h **** *
+  17:Inc/bno055_support.h **** *   Redistributions of source code must retain the above copyright
+  18:Inc/bno055_support.h **** *   notice, this list of conditions and the following disclaimer.
+  19:Inc/bno055_support.h **** *
+  20:Inc/bno055_support.h **** *   Redistributions in binary form must reproduce the above copyright
+  21:Inc/bno055_support.h **** *   notice, this list of conditions and the following disclaimer in the
+  22:Inc/bno055_support.h **** *   documentation and/or other materials provided with the distribution.
+  23:Inc/bno055_support.h **** *
+  24:Inc/bno055_support.h **** *   Neither the name of the copyright holder nor the names of the
+  25:Inc/bno055_support.h **** *   contributors may be used to endorse or promote products derived from
+  26:Inc/bno055_support.h **** *   this software without specific prior written permission.
+  27:Inc/bno055_support.h **** *
+  28:Inc/bno055_support.h **** * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND
+  29:Inc/bno055_support.h **** * CONTRIBUTORS "AS IS" AND ANY EXPRESS OR
+  30:Inc/bno055_support.h **** * IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED
+  31:Inc/bno055_support.h **** * WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE
+  32:Inc/bno055_support.h **** * DISCLAIMED. IN NO EVENT SHALL COPYRIGHT HOLDER
+ARM GAS  /tmp/ccAE1LFE.s 			page 2
+
+
+  33:Inc/bno055_support.h **** * OR CONTRIBUTORS BE LIABLE FOR ANY
+  34:Inc/bno055_support.h **** * DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY,
+  35:Inc/bno055_support.h **** * OR CONSEQUENTIAL DAMAGES(INCLUDING, BUT NOT LIMITED TO,
+  36:Inc/bno055_support.h **** * PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES;
+  37:Inc/bno055_support.h **** * LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+  38:Inc/bno055_support.h **** * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY,
+  39:Inc/bno055_support.h **** * WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT
+  40:Inc/bno055_support.h **** * (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN
+  41:Inc/bno055_support.h **** * ANY WAY OUT OF THE USE OF THIS
+  42:Inc/bno055_support.h **** * SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE
+  43:Inc/bno055_support.h **** *
+  44:Inc/bno055_support.h **** * The information provided is believed to be accurate and reliable.
+  45:Inc/bno055_support.h **** * The copyright holder assumes no responsibility
+  46:Inc/bno055_support.h **** * for the consequences of use
+  47:Inc/bno055_support.h **** * of such information nor for any infringement of patents or
+  48:Inc/bno055_support.h **** * other rights of third parties which may result from its use.
+  49:Inc/bno055_support.h **** * No license is granted by implication or otherwise under any patent or
+  50:Inc/bno055_support.h **** * patent rights of the copyright holder.
+  51:Inc/bno055_support.h **** **************************************************************************/
+  52:Inc/bno055_support.h **** /*---------------------------------------------------------------------------*
+  53:Inc/bno055_support.h ****  Includes
+  54:Inc/bno055_support.h **** *---------------------------------------------------------------------------*/
+  55:Inc/bno055_support.h **** #include "bno055.h"
+  56:Inc/bno055_support.h **** 
+  57:Inc/bno055_support.h **** /*----------------------------------------------------------------------------*
+  58:Inc/bno055_support.h ****  *  The following APIs are used for reading and writing of
+  59:Inc/bno055_support.h ****  *	sensor data using I2C communication
+  60:Inc/bno055_support.h **** *----------------------------------------------------------------------------*/
+  61:Inc/bno055_support.h **** #define	BNO055_API
+  62:Inc/bno055_support.h **** 
+  63:Inc/bno055_support.h **** #ifdef	BNO055_API
+  64:Inc/bno055_support.h **** #define	BNO055_I2C_BUS_WRITE_ARRAY_INDEX	((u8)1)
+  65:Inc/bno055_support.h **** /*	\Brief: The API is used as I2C bus read
+  66:Inc/bno055_support.h ****  *	\Return : Status of the I2C read
+  67:Inc/bno055_support.h ****  *	\param dev_addr : The device address of the sensor
+  68:Inc/bno055_support.h ****  *	\param reg_addr : Address of the first register,
+  69:Inc/bno055_support.h ****  *   will data is going to be read
+  70:Inc/bno055_support.h ****  *	\param reg_data : This data read from the sensor,
+  71:Inc/bno055_support.h ****  *   which is hold in an array
+  72:Inc/bno055_support.h ****  *	\param cnt : The no of byte of data to be read
+  73:Inc/bno055_support.h ****  */
+  74:Inc/bno055_support.h **** s8 BNO055_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);
+  75:Inc/bno055_support.h **** /*	\Brief: The API is used as SPI bus write
+  76:Inc/bno055_support.h ****  *	\Return : Status of the SPI write
+  77:Inc/bno055_support.h ****  *	\param dev_addr : The device address of the sensor
+  78:Inc/bno055_support.h ****  *	\param reg_addr : Address of the first register,
+  79:Inc/bno055_support.h ****  *   will data is going to be written
+  80:Inc/bno055_support.h ****  *	\param reg_data : It is a value hold in the array,
+  81:Inc/bno055_support.h ****  *	will be used for write the value into the register
+  82:Inc/bno055_support.h ****  *	\param cnt : The no of byte of data to be write
+  83:Inc/bno055_support.h ****  */
+  84:Inc/bno055_support.h **** s8 BNO055_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt);
+  85:Inc/bno055_support.h **** /*
+  86:Inc/bno055_support.h ****  * \Brief: I2C init routine
+  87:Inc/bno055_support.h **** */
+  88:Inc/bno055_support.h **** s8 I2C_routine(void);
+  89:Inc/bno055_support.h **** #endif
+ARM GAS  /tmp/ccAE1LFE.s 			page 3
+
+
+  90:Inc/bno055_support.h **** /********************End of I2C APIs declarations***********************/
+  91:Inc/bno055_support.h **** /*	Brief : The delay routine
+  92:Inc/bno055_support.h ****  *	\param : delay in ms
+  93:Inc/bno055_support.h **** */
+  94:Inc/bno055_support.h **** void BNO055_delay_msek(u32 msek);
+  95:Inc/bno055_support.h **** /* This API is an example for reading sensor data
+  96:Inc/bno055_support.h ****  *	\param: None
+  97:Inc/bno055_support.h ****  *	\return: communication result
+  98:Inc/bno055_support.h ****  */
+  99:Inc/bno055_support.h **** s32 bno055_data_readout_template(void);
+ 100:Inc/bno055_support.h **** /*----------------------------------------------------------------------------*
+ 101:Inc/bno055_support.h ****  *  struct bno055_t parameters can be accessed by using BNO055
+ 102:Inc/bno055_support.h ****  *	BNO055_t having the following parameters
+ 103:Inc/bno055_support.h ****  *	Bus write function pointer: BNO055_WR_FUNC_PTR
+ 104:Inc/bno055_support.h ****  *	Bus read function pointer: BNO055_RD_FUNC_PTR
+ 105:Inc/bno055_support.h ****  *	Burst read function pointer: BNO055_BRD_FUNC_PTR
+ 106:Inc/bno055_support.h ****  *	Delay function pointer: delay_msec
+ 107:Inc/bno055_support.h ****  *	I2C address: dev_addr
+ 108:Inc/bno055_support.h ****  *	Chip id of the sensor: chip_id
+ 109:Inc/bno055_support.h **** *---------------------------------------------------------------------------*/
+ 110:Inc/bno055_support.h **** struct bno055_t bno055;
+ 111:Inc/bno055_support.h **** /* This API is an example for reading sensor data
+ 112:Inc/bno055_support.h ****  *	\param: None
+ 113:Inc/bno055_support.h ****  *	\return: communication result
+ 114:Inc/bno055_support.h ****  */
+ 115:Inc/bno055_support.h **** s32 bno055_data_readout_template(void)
+ 116:Inc/bno055_support.h **** {
+ 117:Inc/bno055_support.h **** 	/* Variable used to return value of
+ 118:Inc/bno055_support.h **** 	communication routine*/
+ 119:Inc/bno055_support.h **** 	s32 comres = BNO055_ERROR;
+ 120:Inc/bno055_support.h **** 	/* variable used to set the power mode of the sensor*/
+ 121:Inc/bno055_support.h **** 	u8 power_mode = BNO055_INIT_VALUE;
+ 122:Inc/bno055_support.h **** 	/*********read raw accel data***********/
+ 123:Inc/bno055_support.h **** 	/* variable used to read the accel x data */
+ 124:Inc/bno055_support.h **** 	s16 accel_datax = BNO055_INIT_VALUE;
+ 125:Inc/bno055_support.h **** 	 /* variable used to read the accel y data */
+ 126:Inc/bno055_support.h **** 	s16 accel_datay = BNO055_INIT_VALUE;
+ 127:Inc/bno055_support.h **** 	/* variable used to read the accel z data */
+ 128:Inc/bno055_support.h **** 	s16 accel_dataz = BNO055_INIT_VALUE;
+ 129:Inc/bno055_support.h **** 	/* variable used to read the accel xyz data */
+ 130:Inc/bno055_support.h **** 	struct bno055_accel_t accel_xyz;
+ 131:Inc/bno055_support.h **** 
+ 132:Inc/bno055_support.h **** 	/*********read raw mag data***********/
+ 133:Inc/bno055_support.h **** 	/* variable used to read the mag x data */
+ 134:Inc/bno055_support.h **** 	s16 mag_datax  = BNO055_INIT_VALUE;
+ 135:Inc/bno055_support.h **** 	/* variable used to read the mag y data */
+ 136:Inc/bno055_support.h **** 	s16 mag_datay  = BNO055_INIT_VALUE;
+ 137:Inc/bno055_support.h **** 	/* variable used to read the mag z data */
+ 138:Inc/bno055_support.h **** 	s16 mag_dataz  = BNO055_INIT_VALUE;
+ 139:Inc/bno055_support.h **** 	/* structure used to read the mag xyz data */
+ 140:Inc/bno055_support.h **** 	struct bno055_mag_t mag_xyz;
+ 141:Inc/bno055_support.h **** 
+ 142:Inc/bno055_support.h **** 	/***********read raw gyro data***********/
+ 143:Inc/bno055_support.h **** 	/* variable used to read the gyro x data */
+ 144:Inc/bno055_support.h **** 	s16 gyro_datax = BNO055_INIT_VALUE;
+ 145:Inc/bno055_support.h **** 	/* variable used to read the gyro y data */
+ 146:Inc/bno055_support.h **** 	s16 gyro_datay = BNO055_INIT_VALUE;
+ARM GAS  /tmp/ccAE1LFE.s 			page 4
+
+
+ 147:Inc/bno055_support.h **** 	 /* variable used to read the gyro z data */
+ 148:Inc/bno055_support.h **** 	s16 gyro_dataz = BNO055_INIT_VALUE;
+ 149:Inc/bno055_support.h **** 	 /* structure used to read the gyro xyz data */
+ 150:Inc/bno055_support.h **** 	struct bno055_gyro_t gyro_xyz;
+ 151:Inc/bno055_support.h **** 
+ 152:Inc/bno055_support.h **** 	/*************read raw Euler data************/
+ 153:Inc/bno055_support.h **** 	/* variable used to read the euler h data */
+ 154:Inc/bno055_support.h **** 	s16 euler_data_h = BNO055_INIT_VALUE;
+ 155:Inc/bno055_support.h **** 	 /* variable used to read the euler r data */
+ 156:Inc/bno055_support.h **** 	s16 euler_data_r = BNO055_INIT_VALUE;
+ 157:Inc/bno055_support.h **** 	/* variable used to read the euler p data */
+ 158:Inc/bno055_support.h **** 	s16 euler_data_p = BNO055_INIT_VALUE;
+ 159:Inc/bno055_support.h **** 	/* structure used to read the euler hrp data */
+ 160:Inc/bno055_support.h **** 	struct bno055_euler_t euler_hrp;
+ 161:Inc/bno055_support.h **** 
+ 162:Inc/bno055_support.h **** 	/************read raw quaternion data**************/
+ 163:Inc/bno055_support.h **** 	/* variable used to read the quaternion w data */
+ 164:Inc/bno055_support.h **** 	s16 quaternion_data_w = BNO055_INIT_VALUE;
+ 165:Inc/bno055_support.h **** 	/* variable used to read the quaternion x data */
+ 166:Inc/bno055_support.h **** 	s16 quaternion_data_x = BNO055_INIT_VALUE;
+ 167:Inc/bno055_support.h **** 	/* variable used to read the quaternion y data */
+ 168:Inc/bno055_support.h **** 	s16 quaternion_data_y = BNO055_INIT_VALUE;
+ 169:Inc/bno055_support.h **** 	/* variable used to read the quaternion z data */
+ 170:Inc/bno055_support.h **** 	s16 quaternion_data_z = BNO055_INIT_VALUE;
+ 171:Inc/bno055_support.h **** 	/* structure used to read the quaternion wxyz data */
+ 172:Inc/bno055_support.h **** 	struct bno055_quaternion_t quaternion_wxyz;
+ 173:Inc/bno055_support.h **** 
+ 174:Inc/bno055_support.h **** 	/************read raw linear acceleration data***********/
+ 175:Inc/bno055_support.h **** 	/* variable used to read the linear accel x data */
+ 176:Inc/bno055_support.h **** 	s16 linear_accel_data_x = BNO055_INIT_VALUE;
+ 177:Inc/bno055_support.h **** 	/* variable used to read the linear accel y data */
+ 178:Inc/bno055_support.h **** 	s16 linear_accel_data_y = BNO055_INIT_VALUE;
+ 179:Inc/bno055_support.h **** 	/* variable used to read the linear accel z data */
+ 180:Inc/bno055_support.h **** 	s16 linear_accel_data_z = BNO055_INIT_VALUE;
+ 181:Inc/bno055_support.h **** 	/* structure used to read the linear accel xyz data */
+ 182:Inc/bno055_support.h **** 	struct bno055_linear_accel_t linear_acce_xyz;
+ 183:Inc/bno055_support.h **** 
+ 184:Inc/bno055_support.h **** 	/*****************read raw gravity sensor data****************/
+ 185:Inc/bno055_support.h **** 	/* variable used to read the gravity x data */
+ 186:Inc/bno055_support.h **** 	s16 gravity_data_x = BNO055_INIT_VALUE;
+ 187:Inc/bno055_support.h **** 	/* variable used to read the gravity y data */
+ 188:Inc/bno055_support.h **** 	s16 gravity_data_y = BNO055_INIT_VALUE;
+ 189:Inc/bno055_support.h **** 	/* variable used to read the gravity z data */
+ 190:Inc/bno055_support.h **** 	s16 gravity_data_z = BNO055_INIT_VALUE;
+ 191:Inc/bno055_support.h **** 	/* structure used to read the gravity xyz data */
+ 192:Inc/bno055_support.h **** 	struct bno055_gravity_t gravity_xyz;
+ 193:Inc/bno055_support.h **** 
+ 194:Inc/bno055_support.h **** 	/*************read accel converted data***************/
+ 195:Inc/bno055_support.h **** 	/* variable used to read the accel x data output as m/s2 or mg */
+ 196:Inc/bno055_support.h **** 	double d_accel_datax = BNO055_INIT_VALUE;
+ 197:Inc/bno055_support.h **** 	/* variable used to read the accel y data output as m/s2 or mg */
+ 198:Inc/bno055_support.h **** 	double d_accel_datay = BNO055_INIT_VALUE;
+ 199:Inc/bno055_support.h **** 	/* variable used to read the accel z data output as m/s2 or mg */
+ 200:Inc/bno055_support.h **** 	double d_accel_dataz = BNO055_INIT_VALUE;
+ 201:Inc/bno055_support.h **** 	/* structure used to read the accel xyz data output as m/s2 or mg */
+ 202:Inc/bno055_support.h **** 	struct bno055_accel_double_t d_accel_xyz;
+ 203:Inc/bno055_support.h **** 
+ARM GAS  /tmp/ccAE1LFE.s 			page 5
+
+
+ 204:Inc/bno055_support.h **** 	/******************read mag converted data********************/
+ 205:Inc/bno055_support.h **** 	/* variable used to read the mag x data output as uT*/
+ 206:Inc/bno055_support.h **** 	double d_mag_datax = BNO055_INIT_VALUE;
+ 207:Inc/bno055_support.h **** 	/* variable used to read the mag y data output as uT*/
+ 208:Inc/bno055_support.h **** 	double d_mag_datay = BNO055_INIT_VALUE;
+ 209:Inc/bno055_support.h **** 	/* variable used to read the mag z data output as uT*/
+ 210:Inc/bno055_support.h **** 	double d_mag_dataz = BNO055_INIT_VALUE;
+ 211:Inc/bno055_support.h **** 	/* structure used to read the mag xyz data output as uT*/
+ 212:Inc/bno055_support.h **** 	struct bno055_mag_double_t d_mag_xyz;
+ 213:Inc/bno055_support.h **** 
+ 214:Inc/bno055_support.h **** 	/*****************read gyro converted data************************/
+ 215:Inc/bno055_support.h **** 	/* variable used to read the gyro x data output as dps or rps */
+ 216:Inc/bno055_support.h **** 	double d_gyro_datax = BNO055_INIT_VALUE;
+ 217:Inc/bno055_support.h **** 	/* variable used to read the gyro y data output as dps or rps */
+ 218:Inc/bno055_support.h **** 	double d_gyro_datay = BNO055_INIT_VALUE;
+ 219:Inc/bno055_support.h **** 	/* variable used to read the gyro z data output as dps or rps */
+ 220:Inc/bno055_support.h **** 	double d_gyro_dataz = BNO055_INIT_VALUE;
+ 221:Inc/bno055_support.h **** 	/* structure used to read the gyro xyz data output as dps or rps */
+ 222:Inc/bno055_support.h **** 	struct bno055_gyro_double_t d_gyro_xyz;
+ 223:Inc/bno055_support.h **** 
+ 224:Inc/bno055_support.h **** 	/*******************read euler converted data*******************/
+ 225:Inc/bno055_support.h **** 	/* variable used to read the euler h data output
+ 226:Inc/bno055_support.h **** 	as degree or radians*/
+ 227:Inc/bno055_support.h **** 	double d_euler_data_h = BNO055_INIT_VALUE;
+ 228:Inc/bno055_support.h **** 	/* variable used to read the euler r data output
+ 229:Inc/bno055_support.h **** 	as degree or radians*/
+ 230:Inc/bno055_support.h **** 	double d_euler_data_r = BNO055_INIT_VALUE;
+ 231:Inc/bno055_support.h **** 	/* variable used to read the euler p data output
+ 232:Inc/bno055_support.h **** 	as degree or radians*/
+ 233:Inc/bno055_support.h **** 	double d_euler_data_p = BNO055_INIT_VALUE;
+ 234:Inc/bno055_support.h **** 	/* structure used to read the euler hrp data output
+ 235:Inc/bno055_support.h **** 	as as degree or radians */
+ 236:Inc/bno055_support.h **** 	struct bno055_euler_double_t d_euler_hpr;
+ 237:Inc/bno055_support.h **** 
+ 238:Inc/bno055_support.h **** 	/*********read linear acceleration converted data**********/
+ 239:Inc/bno055_support.h **** 	/* variable used to read the linear accel x data output as m/s2*/
+ 240:Inc/bno055_support.h **** 	double d_linear_accel_datax = BNO055_INIT_VALUE;
+ 241:Inc/bno055_support.h **** 	/* variable used to read the linear accel y data output as m/s2*/
+ 242:Inc/bno055_support.h **** 	double d_linear_accel_datay = BNO055_INIT_VALUE;
+ 243:Inc/bno055_support.h **** 	/* variable used to read the linear accel z data output as m/s2*/
+ 244:Inc/bno055_support.h **** 	double d_linear_accel_dataz = BNO055_INIT_VALUE;
+ 245:Inc/bno055_support.h **** 	/* structure used to read the linear accel xyz data output as m/s2*/
+ 246:Inc/bno055_support.h **** 	struct bno055_linear_accel_double_t d_linear_accel_xyz;
+ 247:Inc/bno055_support.h **** 
+ 248:Inc/bno055_support.h **** 	/********************Gravity converted data**********************/
+ 249:Inc/bno055_support.h **** 	/* variable used to read the gravity sensor x data output as m/s2*/
+ 250:Inc/bno055_support.h **** 	double d_gravity_data_x = BNO055_INIT_VALUE;
+ 251:Inc/bno055_support.h **** 	/* variable used to read the gravity sensor y data output as m/s2*/
+ 252:Inc/bno055_support.h **** 	double d_gravity_data_y = BNO055_INIT_VALUE;
+ 253:Inc/bno055_support.h **** 	/* variable used to read the gravity sensor z data output as m/s2*/
+ 254:Inc/bno055_support.h **** 	double d_gravity_data_z = BNO055_INIT_VALUE;
+ 255:Inc/bno055_support.h **** 	/* structure used to read the gravity xyz data output as m/s2*/
+ 256:Inc/bno055_support.h **** 	struct bno055_gravity_double_t d_gravity_xyz;
+ 257:Inc/bno055_support.h **** /*---------------------------------------------------------------------------*
+ 258:Inc/bno055_support.h ****  *********************** START INITIALIZATION ************************
+ 259:Inc/bno055_support.h ****  *--------------------------------------------------------------------------*/
+ 260:Inc/bno055_support.h ****  #ifdef	BNO055_API
+ARM GAS  /tmp/ccAE1LFE.s 			page 6
+
+
+ 261:Inc/bno055_support.h **** /*	Based on the user need configure I2C interface.
+ 262:Inc/bno055_support.h ****  *	It is example code to explain how to use the bno055 API*/
+ 263:Inc/bno055_support.h **** 	I2C_routine();
+ 264:Inc/bno055_support.h ****  #endif
+ 265:Inc/bno055_support.h **** /*--------------------------------------------------------------------------*
+ 266:Inc/bno055_support.h ****  *  This API used to assign the value/reference of
+ 267:Inc/bno055_support.h ****  *	the following parameters
+ 268:Inc/bno055_support.h ****  *	I2C address
+ 269:Inc/bno055_support.h ****  *	Bus Write
+ 270:Inc/bno055_support.h ****  *	Bus read
+ 271:Inc/bno055_support.h ****  *	Chip id
+ 272:Inc/bno055_support.h ****  *	Page id
+ 273:Inc/bno055_support.h ****  *	Accel revision id
+ 274:Inc/bno055_support.h ****  *	Mag revision id
+ 275:Inc/bno055_support.h ****  *	Gyro revision id
+ 276:Inc/bno055_support.h ****  *	Boot loader revision id
+ 277:Inc/bno055_support.h ****  *	Software revision id
+ 278:Inc/bno055_support.h ****  *-------------------------------------------------------------------------*/
+ 279:Inc/bno055_support.h **** 	comres = bno055_init(&bno055);
+ 280:Inc/bno055_support.h **** 
+ 281:Inc/bno055_support.h **** /*	For initializing the BNO sensor it is required to the operation mode
+ 282:Inc/bno055_support.h **** 	of the sensor as NORMAL
+ 283:Inc/bno055_support.h **** 	Normal mode can set from the register
+ 284:Inc/bno055_support.h **** 	Page - page0
+ 285:Inc/bno055_support.h **** 	register - 0x3E
+ 286:Inc/bno055_support.h **** 	bit positions - 0 and 1*/
+ 287:Inc/bno055_support.h **** 	power_mode = BNO055_POWER_MODE_NORMAL;
+ 288:Inc/bno055_support.h **** 	/* set the power mode as NORMAL*/
+ 289:Inc/bno055_support.h **** 	comres += bno055_set_power_mode(power_mode);
+ 290:Inc/bno055_support.h **** /*----------------------------------------------------------------*
+ 291:Inc/bno055_support.h **** ************************* END INITIALIZATION *************************
+ 292:Inc/bno055_support.h **** *-----------------------------------------------------------------*/
+ 293:Inc/bno055_support.h **** 
+ 294:Inc/bno055_support.h **** /************************* START READ RAW SENSOR DATA****************/
+ 295:Inc/bno055_support.h **** 
+ 296:Inc/bno055_support.h **** /*	Using BNO055 sensor we can read the following sensor data and
+ 297:Inc/bno055_support.h **** 	virtual sensor data
+ 298:Inc/bno055_support.h **** 	Sensor data:
+ 299:Inc/bno055_support.h **** 		Accel
+ 300:Inc/bno055_support.h **** 		Mag
+ 301:Inc/bno055_support.h **** 		Gyro
+ 302:Inc/bno055_support.h **** 	Virtual sensor data
+ 303:Inc/bno055_support.h **** 		Euler
+ 304:Inc/bno055_support.h **** 		Quaternion
+ 305:Inc/bno055_support.h **** 		Linear acceleration
+ 306:Inc/bno055_support.h **** 		Gravity sensor */
+ 307:Inc/bno055_support.h **** /*	For reading sensor raw data it is required to set the
+ 308:Inc/bno055_support.h **** 	operation modes of the sensor
+ 309:Inc/bno055_support.h **** 	operation mode can set from the register
+ 310:Inc/bno055_support.h **** 	page - page0
+ 311:Inc/bno055_support.h **** 	register - 0x3D
+ 312:Inc/bno055_support.h **** 	bit - 0 to 3
+ 313:Inc/bno055_support.h **** 	for sensor data read following operation mode have to set
+ 314:Inc/bno055_support.h **** 	 * SENSOR MODE
+ 315:Inc/bno055_support.h **** 		*0x01 - BNO055_OPERATION_MODE_ACCONLY
+ 316:Inc/bno055_support.h **** 		*0x02 - BNO055_OPERATION_MODE_MAGONLY
+ 317:Inc/bno055_support.h **** 		*0x03 - BNO055_OPERATION_MODE_GYRONLY
+ARM GAS  /tmp/ccAE1LFE.s 			page 7
+
+
+ 318:Inc/bno055_support.h **** 		*0x04 - BNO055_OPERATION_MODE_ACCMAG
+ 319:Inc/bno055_support.h **** 		*0x05 - BNO055_OPERATION_MODE_ACCGYRO
+ 320:Inc/bno055_support.h **** 		*0x06 - BNO055_OPERATION_MODE_MAGGYRO
+ 321:Inc/bno055_support.h **** 		*0x07 - BNO055_OPERATION_MODE_AMG
+ 322:Inc/bno055_support.h **** 		based on the user need configure the operation mode*/
+ 323:Inc/bno055_support.h **** 	comres += bno055_set_operation_mode(BNO055_OPERATION_MODE_AMG);
+ 324:Inc/bno055_support.h **** /*	Raw accel X, Y and Z data can read from the register
+ 325:Inc/bno055_support.h **** 	page - page 0
+ 326:Inc/bno055_support.h **** 	register - 0x08 to 0x0D*/
+ 327:Inc/bno055_support.h **** 	comres += bno055_read_accel_x(&accel_datax);
+ 328:Inc/bno055_support.h **** 	comres += bno055_read_accel_y(&accel_datay);
+ 329:Inc/bno055_support.h **** 	comres += bno055_read_accel_z(&accel_dataz);
+ 330:Inc/bno055_support.h **** 	comres += bno055_read_accel_xyz(&accel_xyz);
+ 331:Inc/bno055_support.h **** /*	Raw mag X, Y and Z data can read from the register
+ 332:Inc/bno055_support.h **** 	page - page 0
+ 333:Inc/bno055_support.h **** 	register - 0x0E to 0x13*/
+ 334:Inc/bno055_support.h **** 	comres += bno055_read_mag_x(&mag_datax);
+ 335:Inc/bno055_support.h **** 	comres += bno055_read_mag_y(&mag_datay);
+ 336:Inc/bno055_support.h **** 	comres += bno055_read_mag_z(&mag_dataz);
+ 337:Inc/bno055_support.h **** 	comres += bno055_read_mag_xyz(&mag_xyz);
+ 338:Inc/bno055_support.h **** /*	Raw gyro X, Y and Z data can read from the register
+ 339:Inc/bno055_support.h **** 	page - page 0
+ 340:Inc/bno055_support.h **** 	register - 0x14 to 0x19*/
+ 341:Inc/bno055_support.h **** 	comres += bno055_read_gyro_x(&gyro_datax);
+ 342:Inc/bno055_support.h **** 	comres += bno055_read_gyro_y(&gyro_datay);
+ 343:Inc/bno055_support.h **** 	comres += bno055_read_gyro_z(&gyro_dataz);
+ 344:Inc/bno055_support.h **** 	comres += bno055_read_gyro_xyz(&gyro_xyz);
+ 345:Inc/bno055_support.h **** 
+ 346:Inc/bno055_support.h **** /************************* END READ RAW SENSOR DATA****************/
+ 347:Inc/bno055_support.h **** 
+ 348:Inc/bno055_support.h **** /************************* START READ RAW FUSION DATA ********
+ 349:Inc/bno055_support.h **** 	For reading fusion data it is required to set the
+ 350:Inc/bno055_support.h **** 	operation modes of the sensor
+ 351:Inc/bno055_support.h **** 	operation mode can set from the register
+ 352:Inc/bno055_support.h **** 	page - page0
+ 353:Inc/bno055_support.h **** 	register - 0x3D
+ 354:Inc/bno055_support.h **** 	bit - 0 to 3
+ 355:Inc/bno055_support.h **** 	for sensor data read following operation mode have to set
+ 356:Inc/bno055_support.h **** 	*FUSION MODE
+ 357:Inc/bno055_support.h **** 		*0x08 - BNO055_OPERATION_MODE_IMUPLUS
+ 358:Inc/bno055_support.h **** 		*0x09 - BNO055_OPERATION_MODE_COMPASS
+ 359:Inc/bno055_support.h **** 		*0x0A - BNO055_OPERATION_MODE_M4G
+ 360:Inc/bno055_support.h **** 		*0x0B - BNO055_OPERATION_MODE_NDOF_FMC_OFF
+ 361:Inc/bno055_support.h **** 		*0x0C - BNO055_OPERATION_MODE_NDOF
+ 362:Inc/bno055_support.h **** 		based on the user need configure the operation mode*/
+ 363:Inc/bno055_support.h **** 	comres += bno055_set_operation_mode(BNO055_OPERATION_MODE_NDOF);
+ 364:Inc/bno055_support.h **** /*	Raw Euler H, R and P data can read from the register
+ 365:Inc/bno055_support.h **** 	page - page 0
+ 366:Inc/bno055_support.h **** 	register - 0x1A to 0x1E */
+ 367:Inc/bno055_support.h **** 	comres += bno055_read_euler_h(&euler_data_h);
+ 368:Inc/bno055_support.h **** 	comres += bno055_read_euler_r(&euler_data_r);
+ 369:Inc/bno055_support.h **** 	comres += bno055_read_euler_p(&euler_data_p);
+ 370:Inc/bno055_support.h **** 	comres += bno055_read_euler_hrp(&euler_hrp);
+ 371:Inc/bno055_support.h **** /*	Raw Quaternion W, X, Y and Z data can read from the register
+ 372:Inc/bno055_support.h **** 	page - page 0
+ 373:Inc/bno055_support.h **** 	register - 0x20 to 0x27 */
+ 374:Inc/bno055_support.h **** 	comres += bno055_read_quaternion_w(&quaternion_data_w);
+ARM GAS  /tmp/ccAE1LFE.s 			page 8
+
+
+ 375:Inc/bno055_support.h **** 	comres += bno055_read_quaternion_x(&quaternion_data_x);
+ 376:Inc/bno055_support.h **** 	comres += bno055_read_quaternion_y(&quaternion_data_y);
+ 377:Inc/bno055_support.h **** 	comres += bno055_read_quaternion_z(&quaternion_data_z);
+ 378:Inc/bno055_support.h **** 	comres += bno055_read_quaternion_wxyz(&quaternion_wxyz);
+ 379:Inc/bno055_support.h **** /*	Raw Linear accel X, Y and Z data can read from the register
+ 380:Inc/bno055_support.h **** 	page - page 0
+ 381:Inc/bno055_support.h **** 	register - 0x28 to 0x2D */
+ 382:Inc/bno055_support.h **** 	comres += bno055_read_linear_accel_x(&linear_accel_data_x);
+ 383:Inc/bno055_support.h **** 	comres += bno055_read_linear_accel_y(&linear_accel_data_y);
+ 384:Inc/bno055_support.h **** 	comres += bno055_read_linear_accel_z(&linear_accel_data_z);
+ 385:Inc/bno055_support.h **** 	comres += bno055_read_linear_accel_xyz(&linear_acce_xyz);
+ 386:Inc/bno055_support.h **** /*	Raw Gravity sensor X, Y and Z data can read from the register
+ 387:Inc/bno055_support.h **** 	page - page 0
+ 388:Inc/bno055_support.h **** 	register - 0x2E to 0x33 */
+ 389:Inc/bno055_support.h **** 	comres += bno055_read_gravity_x(&gravity_data_x);
+ 390:Inc/bno055_support.h **** 	comres += bno055_read_gravity_y(&gravity_data_y);
+ 391:Inc/bno055_support.h **** 	comres += bno055_read_gravity_z(&gravity_data_z);
+ 392:Inc/bno055_support.h **** 	comres += bno055_read_gravity_xyz(&gravity_xyz);
+ 393:Inc/bno055_support.h **** /************************* END READ RAW FUSION DATA  ************/
+ 394:Inc/bno055_support.h **** 
+ 395:Inc/bno055_support.h **** /******************START READ CONVERTED SENSOR DATA****************/
+ 396:Inc/bno055_support.h **** /*	API used to read accel data output as double  - m/s2 and mg
+ 397:Inc/bno055_support.h **** 	float functions also available in the BNO055 API */
+ 398:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_x_msq(&d_accel_datax);
+ 399:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_x_mg(&d_accel_datax);
+ 400:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_y_msq(&d_accel_datay);
+ 401:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_y_mg(&d_accel_datay);
+ 402:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_z_msq(&d_accel_dataz);
+ 403:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_z_mg(&d_accel_dataz);
+ 404:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_xyz_msq(&d_accel_xyz);
+ 405:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_xyz_mg(&d_accel_xyz);
+ 406:Inc/bno055_support.h **** 
+ 407:Inc/bno055_support.h **** /*	API used to read mag data output as double  - uT(micro Tesla)
+ 408:Inc/bno055_support.h **** 	float functions also available in the BNO055 API */
+ 409:Inc/bno055_support.h **** 	comres += bno055_convert_double_mag_x_uT(&d_mag_datax);
+ 410:Inc/bno055_support.h **** 	comres += bno055_convert_double_mag_y_uT(&d_mag_datay);
+ 411:Inc/bno055_support.h **** 	comres += bno055_convert_double_mag_z_uT(&d_mag_dataz);
+ 412:Inc/bno055_support.h **** 	comres += bno055_convert_double_mag_xyz_uT(&d_mag_xyz);
+ 413:Inc/bno055_support.h **** 
+ 414:Inc/bno055_support.h **** /*	API used to read gyro data output as double  - dps and rps
+ 415:Inc/bno055_support.h **** 	float functions also available in the BNO055 API */
+ 416:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_x_dps(&d_gyro_datax);
+ 417:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_y_dps(&d_gyro_datay);
+ 418:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_z_dps(&d_gyro_dataz);
+ 419:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_x_rps(&d_gyro_datax);
+ 420:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_y_rps(&d_gyro_datay);
+ 421:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_z_rps(&d_gyro_dataz);
+ 422:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_xyz_dps(&d_gyro_xyz);
+ 423:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_xyz_rps(&d_gyro_xyz);
+ 424:Inc/bno055_support.h **** 
+ 425:Inc/bno055_support.h **** /*	API used to read Euler data output as double  - degree and radians
+ 426:Inc/bno055_support.h **** 	float functions also available in the BNO055 API */
+ 427:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_h_deg(&d_euler_data_h);
+ 428:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_r_deg(&d_euler_data_r);
+ 429:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_p_deg(&d_euler_data_p);
+ 430:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_h_rad(&d_euler_data_h);
+ 431:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_r_rad(&d_euler_data_r);
+ARM GAS  /tmp/ccAE1LFE.s 			page 9
+
+
+ 432:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_p_rad(&d_euler_data_p);
+ 433:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_hpr_deg(&d_euler_hpr);
+ 434:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_hpr_rad(&d_euler_hpr);
+ 435:Inc/bno055_support.h **** 
+ 436:Inc/bno055_support.h **** /*	API used to read Linear acceleration data output as m/s2
+ 437:Inc/bno055_support.h **** 	float functions also available in the BNO055 API */
+ 438:Inc/bno055_support.h **** 	comres += bno055_convert_double_linear_accel_x_msq(
+ 439:Inc/bno055_support.h **** 	&d_linear_accel_datax);
+ 440:Inc/bno055_support.h **** 	comres += bno055_convert_double_linear_accel_y_msq(
+ 441:Inc/bno055_support.h **** 	&d_linear_accel_datay);
+ 442:Inc/bno055_support.h **** 	comres += bno055_convert_double_linear_accel_z_msq(
+ 443:Inc/bno055_support.h **** 	&d_linear_accel_dataz);
+ 444:Inc/bno055_support.h **** 	comres += bno055_convert_double_linear_accel_xyz_msq(
+ 445:Inc/bno055_support.h **** 	&d_linear_accel_xyz);
+ 446:Inc/bno055_support.h **** 
+ 447:Inc/bno055_support.h **** /*	API used to read Gravity sensor data output as m/s2
+ 448:Inc/bno055_support.h **** 	float functions also available in the BNO055 API */
+ 449:Inc/bno055_support.h **** 	comres += bno055_convert_gravity_double_x_msq(&d_gravity_data_x);
+ 450:Inc/bno055_support.h **** 	comres += bno055_convert_gravity_double_y_msq(&d_gravity_data_y);
+ 451:Inc/bno055_support.h **** 	comres += bno055_convert_gravity_double_z_msq(&d_gravity_data_z);
+ 452:Inc/bno055_support.h **** 	comres += bno055_convert_double_gravity_xyz_msq(&d_gravity_xyz);
+ 453:Inc/bno055_support.h **** 
+ 454:Inc/bno055_support.h **** 
+ 455:Inc/bno055_support.h **** 	printf("euler: (%u, %u, %u)\r\n", euler_data_h, euler_data_r, euler_data_p);
+ 456:Inc/bno055_support.h **** 
+ 457:Inc/bno055_support.h **** 
+ 458:Inc/bno055_support.h **** /*-----------------------------------------------------------------------*
+ 459:Inc/bno055_support.h **** ************************* START DE-INITIALIZATION ***********************
+ 460:Inc/bno055_support.h **** *-------------------------------------------------------------------------*/
+ 461:Inc/bno055_support.h **** /*	For de - initializing the BNO sensor it is required
+ 462:Inc/bno055_support.h **** 	to the operation mode of the sensor as SUSPEND
+ 463:Inc/bno055_support.h **** 	Suspend mode can set from the register
+ 464:Inc/bno055_support.h **** 	Page - page0
+ 465:Inc/bno055_support.h **** 	register - 0x3E
+ 466:Inc/bno055_support.h **** 	bit positions - 0 and 1*/
+ 467:Inc/bno055_support.h **** 	power_mode = BNO055_POWER_MODE_SUSPEND;
+ 468:Inc/bno055_support.h **** 	/* set the power mode as SUSPEND*/
+ 469:Inc/bno055_support.h **** 	comres += bno055_set_power_mode(power_mode);
+ 470:Inc/bno055_support.h **** 
+ 471:Inc/bno055_support.h **** /*---------------------------------------------------------------------*
+ 472:Inc/bno055_support.h **** ************************* END DE-INITIALIZATION **********************
+ 473:Inc/bno055_support.h **** *---------------------------------------------------------------------*/
+ 474:Inc/bno055_support.h **** return comres;
+ 475:Inc/bno055_support.h **** }
+ 476:Inc/bno055_support.h **** /*--------------------------------------------------------------------------*
+ 477:Inc/bno055_support.h **** *	The following API is used to map the I2C bus read, write, delay and
+ 478:Inc/bno055_support.h **** *	device address with global structure bno055_t
+ 479:Inc/bno055_support.h **** *-------------------------------------------------------------------------*/
+ 480:Inc/bno055_support.h **** /*-------------------------------------------------------------------------*
+ 481:Inc/bno055_support.h ****  *  By using bno055 the following structure parameter can be accessed
+ 482:Inc/bno055_support.h ****  *	Bus write function pointer: BNO055_WR_FUNC_PTR
+ 483:Inc/bno055_support.h ****  *	Bus read function pointer: BNO055_RD_FUNC_PTR
+ 484:Inc/bno055_support.h ****  *	Delay function pointer: delay_msec
+ 485:Inc/bno055_support.h ****  *	I2C address: dev_addr
+ 486:Inc/bno055_support.h ****  *--------------------------------------------------------------------------*/
+ 487:Inc/bno055_support.h **** s8 I2C_routine(void)
+ 488:Inc/bno055_support.h **** {
+ARM GAS  /tmp/ccAE1LFE.s 			page 10
+
+
+ 489:Inc/bno055_support.h **** 	bno055.bus_write = BNO055_I2C_bus_write;
+ 490:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 491:Inc/bno055_support.h **** 	bno055.delay_msec = BNO055_delay_msek;
+ 492:Inc/bno055_support.h **** 	bno055.dev_addr = BNO055_I2C_ADDR1;
+ 493:Inc/bno055_support.h **** 
+ 494:Inc/bno055_support.h **** 	return BNO055_INIT_VALUE;
+ 495:Inc/bno055_support.h **** }
+ 496:Inc/bno055_support.h **** 
+ 497:Inc/bno055_support.h **** /************** I2C buffer length******/
+ 498:Inc/bno055_support.h **** 
+ 499:Inc/bno055_support.h **** #define	I2C_BUFFER_LEN 8
+ 500:Inc/bno055_support.h **** #define I2C0 5
+ 501:Inc/bno055_support.h **** /*-------------------------------------------------------------------*
+ 502:Inc/bno055_support.h **** *
+ 503:Inc/bno055_support.h **** *	This is a sample code for read and write the data by using I2C
+ 504:Inc/bno055_support.h **** *	Use either I2C  based on your need
+ 505:Inc/bno055_support.h **** *	The device address defined in the bno055.h file
+ 506:Inc/bno055_support.h **** *
+ 507:Inc/bno055_support.h **** *--------------------------------------------------------------------*/
+ 508:Inc/bno055_support.h **** 
+ 509:Inc/bno055_support.h **** /*	\Brief: The API is used as I2C bus write
+ 510:Inc/bno055_support.h ****  *	\Return : Status of the I2C write
+ 511:Inc/bno055_support.h ****  *	\param dev_addr : The device address of the sensor
+ 512:Inc/bno055_support.h ****  *	\param reg_addr : Address of the first register,
+ 513:Inc/bno055_support.h ****  *   will data is going to be written
+ 514:Inc/bno055_support.h ****  *	\param reg_data : It is a value hold in the array,
+ 515:Inc/bno055_support.h ****  *		will be used for write the value into the register
+ 516:Inc/bno055_support.h ****  *	\param cnt : The no of byte of data to be write
+ 517:Inc/bno055_support.h ****  */
+ 518:Inc/bno055_support.h **** s8 BNO055_I2C_bus_write(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
+ 519:Inc/bno055_support.h **** {
+  27              		.loc 1 519 0
+  28              		.cfi_startproc
+  29              		@ args = 0, pretend = 0, frame = 0
+  30              		@ frame_needed = 0, uses_anonymous_args = 0
+  31              	.LVL0:
+  32 0000 30B5     		push	{r4, r5, lr}
+  33              	.LCFI0:
+  34              		.cfi_def_cfa_offset 12
+  35              		.cfi_offset 4, -12
+  36              		.cfi_offset 5, -8
+  37              		.cfi_offset 14, -4
+ 520:Inc/bno055_support.h **** 	HAL_I2C_Mem_Write(i2c1Handle, dev_addr << 1, reg_addr, 1, reg_data, cnt, 100);
+  38              		.loc 1 520 0
+  39 0002 0D46     		mov	r5, r1
+  40 0004 064C     		ldr	r4, .L3
+ 519:Inc/bno055_support.h **** 	HAL_I2C_Mem_Write(i2c1Handle, dev_addr << 1, reg_addr, 1, reg_data, cnt, 100);
+  41              		.loc 1 519 0
+  42 0006 85B0     		sub	sp, sp, #20
+  43              	.LCFI1:
+  44              		.cfi_def_cfa_offset 32
+  45              		.loc 1 520 0
+  46 0008 4100     		lsls	r1, r0, #1
+  47              	.LVL1:
+  48 000a 2068     		ldr	r0, [r4]
+  49              	.LVL2:
+  50 000c 6424     		movs	r4, #100
+ARM GAS  /tmp/ccAE1LFE.s 			page 11
+
+
+  51 000e 8DE80C00 		stmia	sp, {r2, r3}
+  52 0012 0294     		str	r4, [sp, #8]
+  53 0014 2A46     		mov	r2, r5
+  54              	.LVL3:
+  55 0016 0123     		movs	r3, #1
+  56              	.LVL4:
+  57 0018 FFF7FEFF 		bl	HAL_I2C_Mem_Write
+  58              	.LVL5:
+ 521:Inc/bno055_support.h **** }
+  59              		.loc 1 521 0
+  60 001c 05B0     		add	sp, sp, #20
+  61              	.LCFI2:
+  62              		.cfi_def_cfa_offset 12
+  63              		@ sp needed
+  64 001e 30BD     		pop	{r4, r5, pc}
+  65              	.L4:
+  66              		.align	2
+  67              	.L3:
+  68 0020 00000000 		.word	i2c1Handle
+  69              		.cfi_endproc
+  70              	.LFE66:
+  72              		.section	.text.BNO055_I2C_bus_read,"ax",%progbits
+  73              		.align	2
+  74              		.global	BNO055_I2C_bus_read
+  75              		.thumb
+  76              		.thumb_func
+  78              	BNO055_I2C_bus_read:
+  79              	.LFB67:
+ 522:Inc/bno055_support.h **** 
+ 523:Inc/bno055_support.h ****  /*	\Brief: The API is used as I2C bus read
+ 524:Inc/bno055_support.h ****  *	\Return : Status of the I2C read
+ 525:Inc/bno055_support.h ****  *	\param dev_addr : The device address of the sensor
+ 526:Inc/bno055_support.h ****  *	\param reg_addr : Address of the first register,
+ 527:Inc/bno055_support.h ****  *  will data is going to be read
+ 528:Inc/bno055_support.h ****  *	\param reg_data : This data read from the sensor,
+ 529:Inc/bno055_support.h ****  *   which is hold in an array
+ 530:Inc/bno055_support.h ****  *	\param cnt : The no of byte of data to be read
+ 531:Inc/bno055_support.h ****  */
+ 532:Inc/bno055_support.h **** s8 BNO055_I2C_bus_read(u8 dev_addr, u8 reg_addr, u8 *reg_data, u8 cnt)
+ 533:Inc/bno055_support.h **** {
+  80              		.loc 1 533 0
+  81              		.cfi_startproc
+  82              		@ args = 0, pretend = 0, frame = 0
+  83              		@ frame_needed = 0, uses_anonymous_args = 0
+  84              	.LVL6:
+  85 0000 30B5     		push	{r4, r5, lr}
+  86              	.LCFI3:
+  87              		.cfi_def_cfa_offset 12
+  88              		.cfi_offset 4, -12
+  89              		.cfi_offset 5, -8
+  90              		.cfi_offset 14, -4
+ 534:Inc/bno055_support.h **** 	HAL_I2C_Mem_Read(i2c1Handle, dev_addr << 1, reg_addr, 1, reg_data, cnt, 100);
+  91              		.loc 1 534 0
+  92 0002 0D46     		mov	r5, r1
+  93 0004 064C     		ldr	r4, .L7
+ 533:Inc/bno055_support.h **** 	HAL_I2C_Mem_Read(i2c1Handle, dev_addr << 1, reg_addr, 1, reg_data, cnt, 100);
+  94              		.loc 1 533 0
+ARM GAS  /tmp/ccAE1LFE.s 			page 12
+
+
+  95 0006 85B0     		sub	sp, sp, #20
+  96              	.LCFI4:
+  97              		.cfi_def_cfa_offset 32
+  98              		.loc 1 534 0
+  99 0008 4100     		lsls	r1, r0, #1
+ 100              	.LVL7:
+ 101 000a 2068     		ldr	r0, [r4]
+ 102              	.LVL8:
+ 103 000c 6424     		movs	r4, #100
+ 104 000e 8DE80C00 		stmia	sp, {r2, r3}
+ 105 0012 0294     		str	r4, [sp, #8]
+ 106 0014 2A46     		mov	r2, r5
+ 107              	.LVL9:
+ 108 0016 0123     		movs	r3, #1
+ 109              	.LVL10:
+ 110 0018 FFF7FEFF 		bl	HAL_I2C_Mem_Read
+ 111              	.LVL11:
+ 535:Inc/bno055_support.h **** }
+ 112              		.loc 1 535 0
+ 113 001c 05B0     		add	sp, sp, #20
+ 114              	.LCFI5:
+ 115              		.cfi_def_cfa_offset 12
+ 116              		@ sp needed
+ 117 001e 30BD     		pop	{r4, r5, pc}
+ 118              	.L8:
+ 119              		.align	2
+ 120              	.L7:
+ 121 0020 00000000 		.word	i2c1Handle
+ 122              		.cfi_endproc
+ 123              	.LFE67:
+ 125              		.section	.text.BNO055_delay_msek,"ax",%progbits
+ 126              		.align	2
+ 127              		.global	BNO055_delay_msek
+ 128              		.thumb
+ 129              		.thumb_func
+ 131              	BNO055_delay_msek:
+ 132              	.LFB68:
+ 536:Inc/bno055_support.h **** /*	Brief : The delay routine
+ 537:Inc/bno055_support.h ****  *	\param : delay in ms
+ 538:Inc/bno055_support.h **** */
+ 539:Inc/bno055_support.h **** void BNO055_delay_msek(u32 msek)
+ 540:Inc/bno055_support.h **** {
+ 133              		.loc 1 540 0
+ 134              		.cfi_startproc
+ 135              		@ args = 0, pretend = 0, frame = 0
+ 136              		@ frame_needed = 0, uses_anonymous_args = 0
+ 137              		@ link register save eliminated.
+ 138              	.LVL12:
+ 541:Inc/bno055_support.h **** 	HAL_Delay(msek);
+ 139              		.loc 1 541 0
+ 140 0000 FFF7FEBF 		b	HAL_Delay
+ 141              	.LVL13:
+ 142              		.cfi_endproc
+ 143              	.LFE68:
+ 145              		.section	.text._write,"ax",%progbits
+ 146              		.align	2
+ 147              		.global	_write
+ARM GAS  /tmp/ccAE1LFE.s 			page 13
+
+
+ 148              		.thumb
+ 149              		.thumb_func
+ 151              	_write:
+ 152              	.LFB63:
+ 153              		.file 2 "Src/usrMain.c"
+   1:Src/usrMain.c **** /* gyro calib, gy-87
+   2:Src/usrMain.c **** $1 = {
+   3:Src/usrMain.c ****   x = 1.79923117,
+   4:Src/usrMain.c ****   y = 0.531753778,
+   5:Src/usrMain.c ****   z = 0.780779481
+   6:Src/usrMain.c **** }
+   7:Src/usrMain.c **** 
+   8:Src/usrMain.c **** $2 = {
+   9:Src/usrMain.c ****   x = 1.67178833,
+  10:Src/usrMain.c ****   y = 0.185795322,
+  11:Src/usrMain.c ****   z = -0.496351868
+  12:Src/usrMain.c **** }
+  13:Src/usrMain.c **** */
+  14:Src/usrMain.c **** #include "usrMain.h"
+  15:Src/usrMain.c **** #include "can.h"
+  16:Src/usrMain.c **** #include "canteros.h"
+  17:Src/usrMain.c **** #include "globals.h"
+  18:Src/usrMain.c **** #include "stdio.h"
+  19:Src/usrMain.c **** #include "stdlib.h"
+  20:Src/usrMain.c **** #include "handles.h"
+  21:Src/usrMain.c **** 
+  22:Src/usrMain.c **** int _write(int file, char *data, int len)
+  23:Src/usrMain.c **** {
+ 154              		.loc 2 23 0
+ 155              		.cfi_startproc
+ 156              		@ args = 0, pretend = 0, frame = 0
+ 157              		@ frame_needed = 0, uses_anonymous_args = 0
+ 158              	.LVL14:
+ 159 0000 08B5     		push	{r3, lr}
+ 160              	.LCFI6:
+ 161              		.cfi_def_cfa_offset 8
+ 162              		.cfi_offset 3, -8
+ 163              		.cfi_offset 14, -4
+  24:Src/usrMain.c ****    HAL_UART_Transmit(uart1Handle, (uint8_t*)data, len, 1000);
+ 164              		.loc 2 24 0
+ 165 0002 044B     		ldr	r3, .L12
+ 166 0004 92B2     		uxth	r2, r2
+ 167              	.LVL15:
+ 168 0006 1868     		ldr	r0, [r3]
+ 169              	.LVL16:
+ 170 0008 4FF47A73 		mov	r3, #1000
+ 171 000c FFF7FEFF 		bl	HAL_UART_Transmit
+ 172              	.LVL17:
+  25:Src/usrMain.c ****    return 0;
+  26:Src/usrMain.c **** }
+ 173              		.loc 2 26 0
+ 174 0010 0020     		movs	r0, #0
+ 175 0012 08BD     		pop	{r3, pc}
+ 176              	.L13:
+ 177              		.align	2
+ 178              	.L12:
+ 179 0014 00000000 		.word	uart1Handle
+ARM GAS  /tmp/ccAE1LFE.s 			page 14
+
+
+ 180              		.cfi_endproc
+ 181              	.LFE63:
+ 183              		.section	.text.bno055_data_readout_template,"ax",%progbits
+ 184              		.align	2
+ 185              		.global	bno055_data_readout_template
+ 186              		.thumb
+ 187              		.thumb_func
+ 189              	bno055_data_readout_template:
+ 190              	.LFB64:
+ 116:Inc/bno055_support.h **** 	/* Variable used to return value of
+ 191              		.loc 1 116 0
+ 192              		.cfi_startproc
+ 193              		@ args = 0, pretend = 0, frame = 392
+ 194              		@ frame_needed = 0, uses_anonymous_args = 0
+ 195              	.LVL18:
+ 196 0000 2DE9F04F 		push	{r4, r5, r6, r7, r8, r9, r10, fp, lr}
+ 197              	.LCFI7:
+ 198              		.cfi_def_cfa_offset 36
+ 199              		.cfi_offset 4, -36
+ 200              		.cfi_offset 5, -32
+ 201              		.cfi_offset 6, -28
+ 202              		.cfi_offset 7, -24
+ 203              		.cfi_offset 8, -20
+ 204              		.cfi_offset 9, -16
+ 205              		.cfi_offset 10, -12
+ 206              		.cfi_offset 11, -8
+ 207              		.cfi_offset 14, -4
+ 208 0004 E3B0     		sub	sp, sp, #396
+ 209              	.LCFI8:
+ 210              		.cfi_def_cfa_offset 432
+ 196:Inc/bno055_support.h **** 	/* variable used to read the accel y data output as m/s2 or mg */
+ 211              		.loc 1 196 0
+ 212 0006 0DF5C47A 		add	r10, sp, #392
+ 206:Inc/bno055_support.h **** 	/* variable used to read the mag y data output as uT*/
+ 213              		.loc 1 206 0
+ 214 000a 5746     		mov	r7, r10
+ 198:Inc/bno055_support.h **** 	/* variable used to read the accel z data output as m/s2 or mg */
+ 215              		.loc 1 198 0
+ 216 000c D146     		mov	r9, r10
+ 200:Inc/bno055_support.h **** 	/* structure used to read the accel xyz data output as m/s2 or mg */
+ 217              		.loc 1 200 0
+ 218 000e D046     		mov	r8, r10
+ 208:Inc/bno055_support.h **** 	/* variable used to read the mag z data output as uT*/
+ 219              		.loc 1 208 0
+ 220 0010 5646     		mov	r6, r10
+ 210:Inc/bno055_support.h **** 	/* structure used to read the mag xyz data output as uT*/
+ 221              		.loc 1 210 0
+ 222 0012 3D46     		mov	r5, r7
+ 124:Inc/bno055_support.h **** 	 /* variable used to read the accel y data */
+ 223              		.loc 1 124 0
+ 224 0014 4FF0000B 		mov	fp, #0
+ 196:Inc/bno055_support.h **** 	/* variable used to read the accel y data output as m/s2 or mg */
+ 225              		.loc 1 196 0
+ 226 0018 0022     		movs	r2, #0
+ 227 001a 0023     		movs	r3, #0
+ 228              	.LBB14:
+ 229              	.LBB15:
+ARM GAS  /tmp/ccAE1LFE.s 			page 15
+
+
+ 489:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 230              		.loc 1 489 0
+ 231 001c C349     		ldr	r1, .L16
+ 232              	.LBE15:
+ 233              	.LBE14:
+ 196:Inc/bno055_support.h **** 	/* variable used to read the accel y data output as m/s2 or mg */
+ 234              		.loc 1 196 0
+ 235 001e 6AE94A23 		strd	r2, [r10, #-296]!
+ 198:Inc/bno055_support.h **** 	/* variable used to read the accel z data output as m/s2 or mg */
+ 236              		.loc 1 198 0
+ 237 0022 69E94823 		strd	r2, [r9, #-288]!
+ 200:Inc/bno055_support.h **** 	/* structure used to read the accel xyz data output as m/s2 or mg */
+ 238              		.loc 1 200 0
+ 239 0026 68E94623 		strd	r2, [r8, #-280]!
+ 206:Inc/bno055_support.h **** 	/* variable used to read the mag y data output as uT*/
+ 240              		.loc 1 206 0
+ 241 002a 67E94423 		strd	r2, [r7, #-272]!
+ 208:Inc/bno055_support.h **** 	/* variable used to read the mag z data output as uT*/
+ 242              		.loc 1 208 0
+ 243 002e 66E94223 		strd	r2, [r6, #-264]!
+ 210:Inc/bno055_support.h **** 	/* structure used to read the mag xyz data output as uT*/
+ 244              		.loc 1 210 0
+ 245 0032 65E94023 		strd	r2, [r5, #-256]!
+ 216:Inc/bno055_support.h **** 	/* variable used to read the gyro y data output as dps or rps */
+ 246              		.loc 1 216 0
+ 247 0036 CDE92423 		strd	r2, [sp, #144]
+ 218:Inc/bno055_support.h **** 	/* variable used to read the gyro z data output as dps or rps */
+ 248              		.loc 1 218 0
+ 249 003a CDE92623 		strd	r2, [sp, #152]
+ 220:Inc/bno055_support.h **** 	/* structure used to read the gyro xyz data output as dps or rps */
+ 250              		.loc 1 220 0
+ 251 003e CDE92823 		strd	r2, [sp, #160]
+ 227:Inc/bno055_support.h **** 	/* variable used to read the euler r data output
+ 252              		.loc 1 227 0
+ 253 0042 CDE92A23 		strd	r2, [sp, #168]
+ 230:Inc/bno055_support.h **** 	/* variable used to read the euler p data output
+ 254              		.loc 1 230 0
+ 255 0046 CDE92C23 		strd	r2, [sp, #176]
+ 256              	.LBB19:
+ 257              	.LBB16:
+ 489:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 258              		.loc 1 489 0
+ 259 004a B948     		ldr	r0, .L16+4
+ 260              	.LBE16:
+ 261              	.LBE19:
+ 124:Inc/bno055_support.h **** 	 /* variable used to read the accel y data */
+ 262              		.loc 1 124 0
+ 263 004c ADF804B0 		strh	fp, [sp, #4]	@ movhi
+ 126:Inc/bno055_support.h **** 	/* variable used to read the accel z data */
+ 264              		.loc 1 126 0
+ 265 0050 ADF806B0 		strh	fp, [sp, #6]	@ movhi
+ 128:Inc/bno055_support.h **** 	/* variable used to read the accel xyz data */
+ 266              		.loc 1 128 0
+ 267 0054 ADF808B0 		strh	fp, [sp, #8]	@ movhi
+ 134:Inc/bno055_support.h **** 	/* variable used to read the mag y data */
+ 268              		.loc 1 134 0
+ 269 0058 ADF80AB0 		strh	fp, [sp, #10]	@ movhi
+ARM GAS  /tmp/ccAE1LFE.s 			page 16
+
+
+ 136:Inc/bno055_support.h **** 	/* variable used to read the mag z data */
+ 270              		.loc 1 136 0
+ 271 005c ADF80CB0 		strh	fp, [sp, #12]	@ movhi
+ 138:Inc/bno055_support.h **** 	/* structure used to read the mag xyz data */
+ 272              		.loc 1 138 0
+ 273 0060 ADF80EB0 		strh	fp, [sp, #14]	@ movhi
+ 144:Inc/bno055_support.h **** 	/* variable used to read the gyro y data */
+ 274              		.loc 1 144 0
+ 275 0064 ADF810B0 		strh	fp, [sp, #16]	@ movhi
+ 146:Inc/bno055_support.h **** 	 /* variable used to read the gyro z data */
+ 276              		.loc 1 146 0
+ 277 0068 ADF812B0 		strh	fp, [sp, #18]	@ movhi
+ 148:Inc/bno055_support.h **** 	 /* structure used to read the gyro xyz data */
+ 278              		.loc 1 148 0
+ 279 006c ADF814B0 		strh	fp, [sp, #20]	@ movhi
+ 154:Inc/bno055_support.h **** 	 /* variable used to read the euler r data */
+ 280              		.loc 1 154 0
+ 281 0070 ADF816B0 		strh	fp, [sp, #22]	@ movhi
+ 156:Inc/bno055_support.h **** 	/* variable used to read the euler p data */
+ 282              		.loc 1 156 0
+ 283 0074 ADF818B0 		strh	fp, [sp, #24]	@ movhi
+ 158:Inc/bno055_support.h **** 	/* structure used to read the euler hrp data */
+ 284              		.loc 1 158 0
+ 285 0078 ADF81AB0 		strh	fp, [sp, #26]	@ movhi
+ 164:Inc/bno055_support.h **** 	/* variable used to read the quaternion x data */
+ 286              		.loc 1 164 0
+ 287 007c ADF81CB0 		strh	fp, [sp, #28]	@ movhi
+ 166:Inc/bno055_support.h **** 	/* variable used to read the quaternion y data */
+ 288              		.loc 1 166 0
+ 289 0080 ADF81EB0 		strh	fp, [sp, #30]	@ movhi
+ 168:Inc/bno055_support.h **** 	/* variable used to read the quaternion z data */
+ 290              		.loc 1 168 0
+ 291 0084 ADF820B0 		strh	fp, [sp, #32]	@ movhi
+ 170:Inc/bno055_support.h **** 	/* structure used to read the quaternion wxyz data */
+ 292              		.loc 1 170 0
+ 293 0088 ADF822B0 		strh	fp, [sp, #34]	@ movhi
+ 176:Inc/bno055_support.h **** 	/* variable used to read the linear accel y data */
+ 294              		.loc 1 176 0
+ 295 008c ADF824B0 		strh	fp, [sp, #36]	@ movhi
+ 178:Inc/bno055_support.h **** 	/* variable used to read the linear accel z data */
+ 296              		.loc 1 178 0
+ 297 0090 ADF826B0 		strh	fp, [sp, #38]	@ movhi
+ 180:Inc/bno055_support.h **** 	/* structure used to read the linear accel xyz data */
+ 298              		.loc 1 180 0
+ 299 0094 ADF828B0 		strh	fp, [sp, #40]	@ movhi
+ 186:Inc/bno055_support.h **** 	/* variable used to read the gravity y data */
+ 300              		.loc 1 186 0
+ 301 0098 ADF82AB0 		strh	fp, [sp, #42]	@ movhi
+ 188:Inc/bno055_support.h **** 	/* variable used to read the gravity z data */
+ 302              		.loc 1 188 0
+ 303 009c ADF82CB0 		strh	fp, [sp, #44]	@ movhi
+ 190:Inc/bno055_support.h **** 	/* structure used to read the gravity xyz data */
+ 304              		.loc 1 190 0
+ 305 00a0 ADF82EB0 		strh	fp, [sp, #46]	@ movhi
+ 233:Inc/bno055_support.h **** 	/* structure used to read the euler hrp data output
+ 306              		.loc 1 233 0
+ 307 00a4 CDE92E23 		strd	r2, [sp, #184]
+ARM GAS  /tmp/ccAE1LFE.s 			page 17
+
+
+ 240:Inc/bno055_support.h **** 	/* variable used to read the linear accel y data output as m/s2*/
+ 308              		.loc 1 240 0
+ 309 00a8 CDE93023 		strd	r2, [sp, #192]
+ 242:Inc/bno055_support.h **** 	/* variable used to read the linear accel z data output as m/s2*/
+ 310              		.loc 1 242 0
+ 311 00ac CDE93223 		strd	r2, [sp, #200]
+ 244:Inc/bno055_support.h **** 	/* structure used to read the linear accel xyz data output as m/s2*/
+ 312              		.loc 1 244 0
+ 313 00b0 CDE93423 		strd	r2, [sp, #208]
+ 250:Inc/bno055_support.h **** 	/* variable used to read the gravity sensor y data output as m/s2*/
+ 314              		.loc 1 250 0
+ 315 00b4 CDE93623 		strd	r2, [sp, #216]
+ 252:Inc/bno055_support.h **** 	/* variable used to read the gravity sensor z data output as m/s2*/
+ 316              		.loc 1 252 0
+ 317 00b8 CDE93823 		strd	r2, [sp, #224]
+ 254:Inc/bno055_support.h **** 	/* structure used to read the gravity xyz data output as m/s2*/
+ 318              		.loc 1 254 0
+ 319 00bc CDE93A23 		strd	r2, [sp, #232]
+ 320              	.LBB20:
+ 321              	.LBB17:
+ 490:Inc/bno055_support.h **** 	bno055.delay_msec = BNO055_delay_msek;
+ 322              		.loc 1 490 0
+ 323 00c0 9C4B     		ldr	r3, .L16+8
+ 491:Inc/bno055_support.h **** 	bno055.dev_addr = BNO055_I2C_ADDR1;
+ 324              		.loc 1 491 0
+ 325 00c2 9D4A     		ldr	r2, .L16+12
+ 489:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 326              		.loc 1 489 0
+ 327 00c4 C860     		str	r0, [r1, #12]
+ 490:Inc/bno055_support.h **** 	bno055.delay_msec = BNO055_delay_msek;
+ 328              		.loc 1 490 0
+ 329 00c6 0B61     		str	r3, [r1, #16]
+ 330              	.LBE17:
+ 331              	.LBE20:
+ 279:Inc/bno055_support.h **** 
+ 332              		.loc 1 279 0
+ 333 00c8 0846     		mov	r0, r1
+ 334              	.LBB21:
+ 335              	.LBB18:
+ 492:Inc/bno055_support.h **** 
+ 336              		.loc 1 492 0
+ 337 00ca 2823     		movs	r3, #40
+ 491:Inc/bno055_support.h **** 	bno055.dev_addr = BNO055_I2C_ADDR1;
+ 338              		.loc 1 491 0
+ 339 00cc 4A61     		str	r2, [r1, #20]
+ 492:Inc/bno055_support.h **** 
+ 340              		.loc 1 492 0
+ 341 00ce 4B72     		strb	r3, [r1, #9]
+ 342              	.LBE18:
+ 343              	.LBE21:
+ 279:Inc/bno055_support.h **** 
+ 344              		.loc 1 279 0
+ 345 00d0 FFF7FEFF 		bl	bno055_init
+ 346              	.LVL19:
+ 347 00d4 0446     		mov	r4, r0
+ 348              	.LVL20:
+ 289:Inc/bno055_support.h **** /*----------------------------------------------------------------*
+ARM GAS  /tmp/ccAE1LFE.s 			page 18
+
+
+ 349              		.loc 1 289 0
+ 350 00d6 5846     		mov	r0, fp
+ 351              	.LVL21:
+ 352 00d8 FFF7FEFF 		bl	bno055_set_power_mode
+ 353              	.LVL22:
+ 354 00dc 0444     		add	r4, r4, r0
+ 355              	.LVL23:
+ 323:Inc/bno055_support.h **** /*	Raw accel X, Y and Z data can read from the register
+ 356              		.loc 1 323 0
+ 357 00de 0720     		movs	r0, #7
+ 358 00e0 FFF7FEFF 		bl	bno055_set_operation_mode
+ 359              	.LVL24:
+ 360 00e4 0444     		add	r4, r4, r0
+ 361              	.LVL25:
+ 327:Inc/bno055_support.h **** 	comres += bno055_read_accel_y(&accel_datay);
+ 362              		.loc 1 327 0
+ 363 00e6 01A8     		add	r0, sp, #4
+ 364 00e8 FFF7FEFF 		bl	bno055_read_accel_x
+ 365              	.LVL26:
+ 366 00ec 0444     		add	r4, r4, r0
+ 367              	.LVL27:
+ 328:Inc/bno055_support.h **** 	comres += bno055_read_accel_z(&accel_dataz);
+ 368              		.loc 1 328 0
+ 369 00ee 0DF10600 		add	r0, sp, #6
+ 370 00f2 FFF7FEFF 		bl	bno055_read_accel_y
+ 371              	.LVL28:
+ 372 00f6 0444     		add	r4, r4, r0
+ 373              	.LVL29:
+ 329:Inc/bno055_support.h **** 	comres += bno055_read_accel_xyz(&accel_xyz);
+ 374              		.loc 1 329 0
+ 375 00f8 02A8     		add	r0, sp, #8
+ 376 00fa FFF7FEFF 		bl	bno055_read_accel_z
+ 377              	.LVL30:
+ 378 00fe 0444     		add	r4, r4, r0
+ 379              	.LVL31:
+ 330:Inc/bno055_support.h **** /*	Raw mag X, Y and Z data can read from the register
+ 380              		.loc 1 330 0
+ 381 0100 0CA8     		add	r0, sp, #48
+ 382 0102 FFF7FEFF 		bl	bno055_read_accel_xyz
+ 383              	.LVL32:
+ 384 0106 0444     		add	r4, r4, r0
+ 385              	.LVL33:
+ 334:Inc/bno055_support.h **** 	comres += bno055_read_mag_y(&mag_datay);
+ 386              		.loc 1 334 0
+ 387 0108 0DF10A00 		add	r0, sp, #10
+ 388 010c FFF7FEFF 		bl	bno055_read_mag_x
+ 389              	.LVL34:
+ 390 0110 0444     		add	r4, r4, r0
+ 391              	.LVL35:
+ 335:Inc/bno055_support.h **** 	comres += bno055_read_mag_z(&mag_dataz);
+ 392              		.loc 1 335 0
+ 393 0112 03A8     		add	r0, sp, #12
+ 394 0114 FFF7FEFF 		bl	bno055_read_mag_y
+ 395              	.LVL36:
+ 396 0118 0444     		add	r4, r4, r0
+ 397              	.LVL37:
+ 336:Inc/bno055_support.h **** 	comres += bno055_read_mag_xyz(&mag_xyz);
+ARM GAS  /tmp/ccAE1LFE.s 			page 19
+
+
+ 398              		.loc 1 336 0
+ 399 011a 0DF10E00 		add	r0, sp, #14
+ 400 011e FFF7FEFF 		bl	bno055_read_mag_z
+ 401              	.LVL38:
+ 402 0122 0444     		add	r4, r4, r0
+ 403              	.LVL39:
+ 337:Inc/bno055_support.h **** /*	Raw gyro X, Y and Z data can read from the register
+ 404              		.loc 1 337 0
+ 405 0124 0EA8     		add	r0, sp, #56
+ 406 0126 FFF7FEFF 		bl	bno055_read_mag_xyz
+ 407              	.LVL40:
+ 408 012a 0444     		add	r4, r4, r0
+ 409              	.LVL41:
+ 341:Inc/bno055_support.h **** 	comres += bno055_read_gyro_y(&gyro_datay);
+ 410              		.loc 1 341 0
+ 411 012c 04A8     		add	r0, sp, #16
+ 412 012e FFF7FEFF 		bl	bno055_read_gyro_x
+ 413              	.LVL42:
+ 414 0132 0444     		add	r4, r4, r0
+ 415              	.LVL43:
+ 342:Inc/bno055_support.h **** 	comres += bno055_read_gyro_z(&gyro_dataz);
+ 416              		.loc 1 342 0
+ 417 0134 0DF11200 		add	r0, sp, #18
+ 418 0138 FFF7FEFF 		bl	bno055_read_gyro_y
+ 419              	.LVL44:
+ 420 013c 0444     		add	r4, r4, r0
+ 421              	.LVL45:
+ 343:Inc/bno055_support.h **** 	comres += bno055_read_gyro_xyz(&gyro_xyz);
+ 422              		.loc 1 343 0
+ 423 013e 05A8     		add	r0, sp, #20
+ 424 0140 FFF7FEFF 		bl	bno055_read_gyro_z
+ 425              	.LVL46:
+ 426 0144 0444     		add	r4, r4, r0
+ 427              	.LVL47:
+ 344:Inc/bno055_support.h **** 
+ 428              		.loc 1 344 0
+ 429 0146 10A8     		add	r0, sp, #64
+ 430 0148 FFF7FEFF 		bl	bno055_read_gyro_xyz
+ 431              	.LVL48:
+ 432 014c 0444     		add	r4, r4, r0
+ 433              	.LVL49:
+ 363:Inc/bno055_support.h **** /*	Raw Euler H, R and P data can read from the register
+ 434              		.loc 1 363 0
+ 435 014e 0C20     		movs	r0, #12
+ 436 0150 FFF7FEFF 		bl	bno055_set_operation_mode
+ 437              	.LVL50:
+ 438 0154 0444     		add	r4, r4, r0
+ 439              	.LVL51:
+ 367:Inc/bno055_support.h **** 	comres += bno055_read_euler_r(&euler_data_r);
+ 440              		.loc 1 367 0
+ 441 0156 0DF11600 		add	r0, sp, #22
+ 442 015a FFF7FEFF 		bl	bno055_read_euler_h
+ 443              	.LVL52:
+ 444 015e 0444     		add	r4, r4, r0
+ 445              	.LVL53:
+ 368:Inc/bno055_support.h **** 	comres += bno055_read_euler_p(&euler_data_p);
+ 446              		.loc 1 368 0
+ARM GAS  /tmp/ccAE1LFE.s 			page 20
+
+
+ 447 0160 06A8     		add	r0, sp, #24
+ 448 0162 FFF7FEFF 		bl	bno055_read_euler_r
+ 449              	.LVL54:
+ 450 0166 0444     		add	r4, r4, r0
+ 451              	.LVL55:
+ 369:Inc/bno055_support.h **** 	comres += bno055_read_euler_hrp(&euler_hrp);
+ 452              		.loc 1 369 0
+ 453 0168 0DF11A00 		add	r0, sp, #26
+ 454 016c FFF7FEFF 		bl	bno055_read_euler_p
+ 455              	.LVL56:
+ 456 0170 0444     		add	r4, r4, r0
+ 457              	.LVL57:
+ 370:Inc/bno055_support.h **** /*	Raw Quaternion W, X, Y and Z data can read from the register
+ 458              		.loc 1 370 0
+ 459 0172 12A8     		add	r0, sp, #72
+ 460 0174 FFF7FEFF 		bl	bno055_read_euler_hrp
+ 461              	.LVL58:
+ 462 0178 0444     		add	r4, r4, r0
+ 463              	.LVL59:
+ 374:Inc/bno055_support.h **** 	comres += bno055_read_quaternion_x(&quaternion_data_x);
+ 464              		.loc 1 374 0
+ 465 017a 07A8     		add	r0, sp, #28
+ 466 017c FFF7FEFF 		bl	bno055_read_quaternion_w
+ 467              	.LVL60:
+ 468 0180 0444     		add	r4, r4, r0
+ 469              	.LVL61:
+ 375:Inc/bno055_support.h **** 	comres += bno055_read_quaternion_y(&quaternion_data_y);
+ 470              		.loc 1 375 0
+ 471 0182 0DF11E00 		add	r0, sp, #30
+ 472 0186 FFF7FEFF 		bl	bno055_read_quaternion_x
+ 473              	.LVL62:
+ 474 018a 0444     		add	r4, r4, r0
+ 475              	.LVL63:
+ 376:Inc/bno055_support.h **** 	comres += bno055_read_quaternion_z(&quaternion_data_z);
+ 476              		.loc 1 376 0
+ 477 018c 08A8     		add	r0, sp, #32
+ 478 018e FFF7FEFF 		bl	bno055_read_quaternion_y
+ 479              	.LVL64:
+ 480 0192 0444     		add	r4, r4, r0
+ 481              	.LVL65:
+ 377:Inc/bno055_support.h **** 	comres += bno055_read_quaternion_wxyz(&quaternion_wxyz);
+ 482              		.loc 1 377 0
+ 483 0194 0DF12200 		add	r0, sp, #34
+ 484 0198 FFF7FEFF 		bl	bno055_read_quaternion_z
+ 485              	.LVL66:
+ 486 019c 0444     		add	r4, r4, r0
+ 487              	.LVL67:
+ 378:Inc/bno055_support.h **** /*	Raw Linear accel X, Y and Z data can read from the register
+ 488              		.loc 1 378 0
+ 489 019e 3CA8     		add	r0, sp, #240
+ 490 01a0 FFF7FEFF 		bl	bno055_read_quaternion_wxyz
+ 491              	.LVL68:
+ 492 01a4 0444     		add	r4, r4, r0
+ 493              	.LVL69:
+ 382:Inc/bno055_support.h **** 	comres += bno055_read_linear_accel_y(&linear_accel_data_y);
+ 494              		.loc 1 382 0
+ 495 01a6 09A8     		add	r0, sp, #36
+ARM GAS  /tmp/ccAE1LFE.s 			page 21
+
+
+ 496 01a8 FFF7FEFF 		bl	bno055_read_linear_accel_x
+ 497              	.LVL70:
+ 498 01ac 0444     		add	r4, r4, r0
+ 499              	.LVL71:
+ 383:Inc/bno055_support.h **** 	comres += bno055_read_linear_accel_z(&linear_accel_data_z);
+ 500              		.loc 1 383 0
+ 501 01ae 0DF12600 		add	r0, sp, #38
+ 502 01b2 FFF7FEFF 		bl	bno055_read_linear_accel_y
+ 503              	.LVL72:
+ 504 01b6 0444     		add	r4, r4, r0
+ 505              	.LVL73:
+ 384:Inc/bno055_support.h **** 	comres += bno055_read_linear_accel_xyz(&linear_acce_xyz);
+ 506              		.loc 1 384 0
+ 507 01b8 0AA8     		add	r0, sp, #40
+ 508 01ba FFF7FEFF 		bl	bno055_read_linear_accel_z
+ 509              	.LVL74:
+ 510 01be 0444     		add	r4, r4, r0
+ 511              	.LVL75:
+ 385:Inc/bno055_support.h **** /*	Raw Gravity sensor X, Y and Z data can read from the register
+ 512              		.loc 1 385 0
+ 513 01c0 14A8     		add	r0, sp, #80
+ 514 01c2 FFF7FEFF 		bl	bno055_read_linear_accel_xyz
+ 515              	.LVL76:
+ 516 01c6 0444     		add	r4, r4, r0
+ 517              	.LVL77:
+ 389:Inc/bno055_support.h **** 	comres += bno055_read_gravity_y(&gravity_data_y);
+ 518              		.loc 1 389 0
+ 519 01c8 0DF12A00 		add	r0, sp, #42
+ 520 01cc FFF7FEFF 		bl	bno055_read_gravity_x
+ 521              	.LVL78:
+ 522 01d0 0444     		add	r4, r4, r0
+ 523              	.LVL79:
+ 390:Inc/bno055_support.h **** 	comres += bno055_read_gravity_z(&gravity_data_z);
+ 524              		.loc 1 390 0
+ 525 01d2 0BA8     		add	r0, sp, #44
+ 526 01d4 FFF7FEFF 		bl	bno055_read_gravity_y
+ 527              	.LVL80:
+ 528 01d8 0444     		add	r4, r4, r0
+ 529              	.LVL81:
+ 391:Inc/bno055_support.h **** 	comres += bno055_read_gravity_xyz(&gravity_xyz);
+ 530              		.loc 1 391 0
+ 531 01da 0DF12E00 		add	r0, sp, #46
+ 532 01de FFF7FEFF 		bl	bno055_read_gravity_z
+ 533              	.LVL82:
+ 534 01e2 0444     		add	r4, r4, r0
+ 535              	.LVL83:
+ 392:Inc/bno055_support.h **** /************************* END READ RAW FUSION DATA  ************/
+ 536              		.loc 1 392 0
+ 537 01e4 16A8     		add	r0, sp, #88
+ 538 01e6 FFF7FEFF 		bl	bno055_read_gravity_xyz
+ 539              	.LVL84:
+ 540 01ea 0444     		add	r4, r4, r0
+ 541              	.LVL85:
+ 398:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_x_mg(&d_accel_datax);
+ 542              		.loc 1 398 0
+ 543 01ec 5046     		mov	r0, r10
+ 544 01ee FFF7FEFF 		bl	bno055_convert_double_accel_x_msq
+ARM GAS  /tmp/ccAE1LFE.s 			page 22
+
+
+ 545              	.LVL86:
+ 546 01f2 0444     		add	r4, r4, r0
+ 547              	.LVL87:
+ 399:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_y_msq(&d_accel_datay);
+ 548              		.loc 1 399 0
+ 549 01f4 5046     		mov	r0, r10
+ 550 01f6 FFF7FEFF 		bl	bno055_convert_double_accel_x_mg
+ 551              	.LVL88:
+ 552 01fa 0444     		add	r4, r4, r0
+ 553              	.LVL89:
+ 400:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_y_mg(&d_accel_datay);
+ 554              		.loc 1 400 0
+ 555 01fc 4846     		mov	r0, r9
+ 556 01fe FFF7FEFF 		bl	bno055_convert_double_accel_y_msq
+ 557              	.LVL90:
+ 558 0202 0444     		add	r4, r4, r0
+ 559              	.LVL91:
+ 401:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_z_msq(&d_accel_dataz);
+ 560              		.loc 1 401 0
+ 561 0204 4846     		mov	r0, r9
+ 562 0206 FFF7FEFF 		bl	bno055_convert_double_accel_y_mg
+ 563              	.LVL92:
+ 564 020a 0444     		add	r4, r4, r0
+ 565              	.LVL93:
+ 402:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_z_mg(&d_accel_dataz);
+ 566              		.loc 1 402 0
+ 567 020c 4046     		mov	r0, r8
+ 568 020e FFF7FEFF 		bl	bno055_convert_double_accel_z_msq
+ 569              	.LVL94:
+ 570 0212 0444     		add	r4, r4, r0
+ 571              	.LVL95:
+ 403:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_xyz_msq(&d_accel_xyz);
+ 572              		.loc 1 403 0
+ 573 0214 4046     		mov	r0, r8
+ 574 0216 FFF7FEFF 		bl	bno055_convert_double_accel_z_mg
+ 575              	.LVL96:
+ 576 021a 0444     		add	r4, r4, r0
+ 577              	.LVL97:
+ 404:Inc/bno055_support.h **** 	comres += bno055_convert_double_accel_xyz_mg(&d_accel_xyz);
+ 578              		.loc 1 404 0
+ 579 021c 3EA8     		add	r0, sp, #248
+ 580 021e FFF7FEFF 		bl	bno055_convert_double_accel_xyz_msq
+ 581              	.LVL98:
+ 582 0222 0444     		add	r4, r4, r0
+ 583              	.LVL99:
+ 405:Inc/bno055_support.h **** 
+ 584              		.loc 1 405 0
+ 585 0224 3EA8     		add	r0, sp, #248
+ 586 0226 FFF7FEFF 		bl	bno055_convert_double_accel_xyz_mg
+ 587              	.LVL100:
+ 588 022a 0444     		add	r4, r4, r0
+ 589              	.LVL101:
+ 409:Inc/bno055_support.h **** 	comres += bno055_convert_double_mag_y_uT(&d_mag_datay);
+ 590              		.loc 1 409 0
+ 591 022c 3846     		mov	r0, r7
+ 592 022e FFF7FEFF 		bl	bno055_convert_double_mag_x_uT
+ 593              	.LVL102:
+ARM GAS  /tmp/ccAE1LFE.s 			page 23
+
+
+ 594 0232 0444     		add	r4, r4, r0
+ 595              	.LVL103:
+ 410:Inc/bno055_support.h **** 	comres += bno055_convert_double_mag_z_uT(&d_mag_dataz);
+ 596              		.loc 1 410 0
+ 597 0234 3046     		mov	r0, r6
+ 598 0236 FFF7FEFF 		bl	bno055_convert_double_mag_y_uT
+ 599              	.LVL104:
+ 600 023a 0444     		add	r4, r4, r0
+ 601              	.LVL105:
+ 411:Inc/bno055_support.h **** 	comres += bno055_convert_double_mag_xyz_uT(&d_mag_xyz);
+ 602              		.loc 1 411 0
+ 603 023c 2846     		mov	r0, r5
+ 604 023e FFF7FEFF 		bl	bno055_convert_double_mag_z_uT
+ 605              	.LVL106:
+ 606 0242 0444     		add	r4, r4, r0
+ 607              	.LVL107:
+ 412:Inc/bno055_support.h **** 
+ 608              		.loc 1 412 0
+ 609 0244 44A8     		add	r0, sp, #272
+ 610 0246 FFF7FEFF 		bl	bno055_convert_double_mag_xyz_uT
+ 611              	.LVL108:
+ 612 024a 0444     		add	r4, r4, r0
+ 613              	.LVL109:
+ 416:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_y_dps(&d_gyro_datay);
+ 614              		.loc 1 416 0
+ 615 024c 24A8     		add	r0, sp, #144
+ 616 024e FFF7FEFF 		bl	bno055_convert_double_gyro_x_dps
+ 617              	.LVL110:
+ 618 0252 0444     		add	r4, r4, r0
+ 619              	.LVL111:
+ 417:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_z_dps(&d_gyro_dataz);
+ 620              		.loc 1 417 0
+ 621 0254 26A8     		add	r0, sp, #152
+ 622 0256 FFF7FEFF 		bl	bno055_convert_double_gyro_y_dps
+ 623              	.LVL112:
+ 624 025a 0444     		add	r4, r4, r0
+ 625              	.LVL113:
+ 418:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_x_rps(&d_gyro_datax);
+ 626              		.loc 1 418 0
+ 627 025c 28A8     		add	r0, sp, #160
+ 628 025e FFF7FEFF 		bl	bno055_convert_double_gyro_z_dps
+ 629              	.LVL114:
+ 630 0262 0444     		add	r4, r4, r0
+ 631              	.LVL115:
+ 419:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_y_rps(&d_gyro_datay);
+ 632              		.loc 1 419 0
+ 633 0264 24A8     		add	r0, sp, #144
+ 634 0266 FFF7FEFF 		bl	bno055_convert_double_gyro_x_rps
+ 635              	.LVL116:
+ 636 026a 0444     		add	r4, r4, r0
+ 637              	.LVL117:
+ 420:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_z_rps(&d_gyro_dataz);
+ 638              		.loc 1 420 0
+ 639 026c 26A8     		add	r0, sp, #152
+ 640 026e FFF7FEFF 		bl	bno055_convert_double_gyro_y_rps
+ 641              	.LVL118:
+ 642 0272 0444     		add	r4, r4, r0
+ARM GAS  /tmp/ccAE1LFE.s 			page 24
+
+
+ 643              	.LVL119:
+ 421:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_xyz_dps(&d_gyro_xyz);
+ 644              		.loc 1 421 0
+ 645 0274 28A8     		add	r0, sp, #160
+ 646 0276 FFF7FEFF 		bl	bno055_convert_double_gyro_z_rps
+ 647              	.LVL120:
+ 648 027a 0444     		add	r4, r4, r0
+ 649              	.LVL121:
+ 422:Inc/bno055_support.h **** 	comres += bno055_convert_double_gyro_xyz_rps(&d_gyro_xyz);
+ 650              		.loc 1 422 0
+ 651 027c 4AA8     		add	r0, sp, #296
+ 652 027e FFF7FEFF 		bl	bno055_convert_double_gyro_xyz_dps
+ 653              	.LVL122:
+ 654 0282 0444     		add	r4, r4, r0
+ 655              	.LVL123:
+ 423:Inc/bno055_support.h **** 
+ 656              		.loc 1 423 0
+ 657 0284 4AA8     		add	r0, sp, #296
+ 658 0286 FFF7FEFF 		bl	bno055_convert_double_gyro_xyz_rps
+ 659              	.LVL124:
+ 660 028a 0444     		add	r4, r4, r0
+ 661              	.LVL125:
+ 427:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_r_deg(&d_euler_data_r);
+ 662              		.loc 1 427 0
+ 663 028c 2AA8     		add	r0, sp, #168
+ 664 028e FFF7FEFF 		bl	bno055_convert_double_euler_h_deg
+ 665              	.LVL126:
+ 666 0292 0444     		add	r4, r4, r0
+ 667              	.LVL127:
+ 428:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_p_deg(&d_euler_data_p);
+ 668              		.loc 1 428 0
+ 669 0294 2CA8     		add	r0, sp, #176
+ 670 0296 FFF7FEFF 		bl	bno055_convert_double_euler_r_deg
+ 671              	.LVL128:
+ 672 029a 0444     		add	r4, r4, r0
+ 673              	.LVL129:
+ 429:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_h_rad(&d_euler_data_h);
+ 674              		.loc 1 429 0
+ 675 029c 2EA8     		add	r0, sp, #184
+ 676 029e FFF7FEFF 		bl	bno055_convert_double_euler_p_deg
+ 677              	.LVL130:
+ 678 02a2 0444     		add	r4, r4, r0
+ 679              	.LVL131:
+ 430:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_r_rad(&d_euler_data_r);
+ 680              		.loc 1 430 0
+ 681 02a4 2AA8     		add	r0, sp, #168
+ 682 02a6 FFF7FEFF 		bl	bno055_convert_double_euler_h_rad
+ 683              	.LVL132:
+ 684 02aa 0444     		add	r4, r4, r0
+ 685              	.LVL133:
+ 431:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_p_rad(&d_euler_data_p);
+ 686              		.loc 1 431 0
+ 687 02ac 2CA8     		add	r0, sp, #176
+ 688 02ae FFF7FEFF 		bl	bno055_convert_double_euler_r_rad
+ 689              	.LVL134:
+ 690 02b2 0444     		add	r4, r4, r0
+ 691              	.LVL135:
+ARM GAS  /tmp/ccAE1LFE.s 			page 25
+
+
+ 432:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_hpr_deg(&d_euler_hpr);
+ 692              		.loc 1 432 0
+ 693 02b4 2EA8     		add	r0, sp, #184
+ 694 02b6 FFF7FEFF 		bl	bno055_convert_double_euler_p_rad
+ 695              	.LVL136:
+ 696 02ba 0444     		add	r4, r4, r0
+ 697              	.LVL137:
+ 433:Inc/bno055_support.h **** 	comres += bno055_convert_double_euler_hpr_rad(&d_euler_hpr);
+ 698              		.loc 1 433 0
+ 699 02bc 50A8     		add	r0, sp, #320
+ 700 02be FFF7FEFF 		bl	bno055_convert_double_euler_hpr_deg
+ 701              	.LVL138:
+ 702 02c2 0444     		add	r4, r4, r0
+ 703              	.LVL139:
+ 434:Inc/bno055_support.h **** 
+ 704              		.loc 1 434 0
+ 705 02c4 50A8     		add	r0, sp, #320
+ 706 02c6 FFF7FEFF 		bl	bno055_convert_double_euler_hpr_rad
+ 707              	.LVL140:
+ 708 02ca 0444     		add	r4, r4, r0
+ 709              	.LVL141:
+ 438:Inc/bno055_support.h **** 	&d_linear_accel_datax);
+ 710              		.loc 1 438 0
+ 711 02cc 30A8     		add	r0, sp, #192
+ 712 02ce FFF7FEFF 		bl	bno055_convert_double_linear_accel_x_msq
+ 713              	.LVL142:
+ 714 02d2 0444     		add	r4, r4, r0
+ 715              	.LVL143:
+ 440:Inc/bno055_support.h **** 	&d_linear_accel_datay);
+ 716              		.loc 1 440 0
+ 717 02d4 32A8     		add	r0, sp, #200
+ 718 02d6 FFF7FEFF 		bl	bno055_convert_double_linear_accel_y_msq
+ 719              	.LVL144:
+ 720 02da 0444     		add	r4, r4, r0
+ 721              	.LVL145:
+ 442:Inc/bno055_support.h **** 	&d_linear_accel_dataz);
+ 722              		.loc 1 442 0
+ 723 02dc 34A8     		add	r0, sp, #208
+ 724 02de FFF7FEFF 		bl	bno055_convert_double_linear_accel_z_msq
+ 725              	.LVL146:
+ 726 02e2 0444     		add	r4, r4, r0
+ 727              	.LVL147:
+ 444:Inc/bno055_support.h **** 	&d_linear_accel_xyz);
+ 728              		.loc 1 444 0
+ 729 02e4 56A8     		add	r0, sp, #344
+ 730 02e6 FFF7FEFF 		bl	bno055_convert_double_linear_accel_xyz_msq
+ 731              	.LVL148:
+ 732 02ea 0444     		add	r4, r4, r0
+ 733              	.LVL149:
+ 449:Inc/bno055_support.h **** 	comres += bno055_convert_gravity_double_y_msq(&d_gravity_data_y);
+ 734              		.loc 1 449 0
+ 735 02ec 36A8     		add	r0, sp, #216
+ 736 02ee FFF7FEFF 		bl	bno055_convert_gravity_double_x_msq
+ 737              	.LVL150:
+ 738 02f2 0444     		add	r4, r4, r0
+ 739              	.LVL151:
+ 450:Inc/bno055_support.h **** 	comres += bno055_convert_gravity_double_z_msq(&d_gravity_data_z);
+ARM GAS  /tmp/ccAE1LFE.s 			page 26
+
+
+ 740              		.loc 1 450 0
+ 741 02f4 38A8     		add	r0, sp, #224
+ 742 02f6 FFF7FEFF 		bl	bno055_convert_gravity_double_y_msq
+ 743              	.LVL152:
+ 744 02fa 0444     		add	r4, r4, r0
+ 745              	.LVL153:
+ 451:Inc/bno055_support.h **** 	comres += bno055_convert_double_gravity_xyz_msq(&d_gravity_xyz);
+ 746              		.loc 1 451 0
+ 747 02fc 3AA8     		add	r0, sp, #232
+ 748 02fe FFF7FEFF 		bl	bno055_convert_gravity_double_z_msq
+ 749              	.LVL154:
+ 750 0302 0444     		add	r4, r4, r0
+ 751              	.LVL155:
+ 452:Inc/bno055_support.h **** 
+ 752              		.loc 1 452 0
+ 753 0304 5CA8     		add	r0, sp, #368
+ 754 0306 FFF7FEFF 		bl	bno055_convert_double_gravity_xyz_msq
+ 755              	.LVL156:
+ 455:Inc/bno055_support.h **** 
+ 756              		.loc 1 455 0
+ 757 030a BDF91610 		ldrsh	r1, [sp, #22]
+ 452:Inc/bno055_support.h **** 
+ 758              		.loc 1 452 0
+ 759 030e 0444     		add	r4, r4, r0
+ 760              	.LVL157:
+ 455:Inc/bno055_support.h **** 
+ 761              		.loc 1 455 0
+ 762 0310 BDF91820 		ldrsh	r2, [sp, #24]
+ 763 0314 BDF91A30 		ldrsh	r3, [sp, #26]
+ 764 0318 0848     		ldr	r0, .L16+16
+ 765 031a FFF7FEFF 		bl	printf
+ 766              	.LVL158:
+ 469:Inc/bno055_support.h **** 
+ 767              		.loc 1 469 0
+ 768 031e 0220     		movs	r0, #2
+ 769 0320 FFF7FEFF 		bl	bno055_set_power_mode
+ 770              	.LVL159:
+ 475:Inc/bno055_support.h **** /*--------------------------------------------------------------------------*
+ 771              		.loc 1 475 0
+ 772 0324 2044     		add	r0, r0, r4
+ 773              	.LVL160:
+ 774 0326 63B0     		add	sp, sp, #396
+ 775              	.LCFI9:
+ 776              		.cfi_def_cfa_offset 36
+ 777              		@ sp needed
+ 778 0328 BDE8F08F 		pop	{r4, r5, r6, r7, r8, r9, r10, fp, pc}
+ 779              	.L17:
+ 780              		.align	2
+ 781              	.L16:
+ 782 032c 00000000 		.word	bno055
+ 783 0330 00000000 		.word	BNO055_I2C_bus_write
+ 784 0334 00000000 		.word	BNO055_I2C_bus_read
+ 785 0338 00000000 		.word	BNO055_delay_msek
+ 786 033c 00000000 		.word	.LC0
+ 787              		.cfi_endproc
+ 788              	.LFE64:
+ 790              		.section	.text.I2C_routine,"ax",%progbits
+ARM GAS  /tmp/ccAE1LFE.s 			page 27
+
+
+ 791              		.align	2
+ 792              		.global	I2C_routine
+ 793              		.thumb
+ 794              		.thumb_func
+ 796              	I2C_routine:
+ 797              	.LFB65:
+ 488:Inc/bno055_support.h **** 	bno055.bus_write = BNO055_I2C_bus_write;
+ 798              		.loc 1 488 0
+ 799              		.cfi_startproc
+ 800              		@ args = 0, pretend = 0, frame = 0
+ 801              		@ frame_needed = 0, uses_anonymous_args = 0
+ 802              		@ link register save eliminated.
+ 489:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 803              		.loc 1 489 0
+ 804 0000 064B     		ldr	r3, .L20
+ 488:Inc/bno055_support.h **** 	bno055.bus_write = BNO055_I2C_bus_write;
+ 805              		.loc 1 488 0
+ 806 0002 10B4     		push	{r4}
+ 807              	.LCFI10:
+ 808              		.cfi_def_cfa_offset 4
+ 809              		.cfi_offset 4, -4
+ 490:Inc/bno055_support.h **** 	bno055.delay_msec = BNO055_delay_msek;
+ 810              		.loc 1 490 0
+ 811 0004 0648     		ldr	r0, .L20+4
+ 489:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 812              		.loc 1 489 0
+ 813 0006 074C     		ldr	r4, .L20+8
+ 491:Inc/bno055_support.h **** 	bno055.dev_addr = BNO055_I2C_ADDR1;
+ 814              		.loc 1 491 0
+ 815 0008 0749     		ldr	r1, .L20+12
+ 492:Inc/bno055_support.h **** 
+ 816              		.loc 1 492 0
+ 817 000a 2822     		movs	r2, #40
+ 818 000c 5A72     		strb	r2, [r3, #9]
+ 489:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 819              		.loc 1 489 0
+ 820 000e DC60     		str	r4, [r3, #12]
+ 490:Inc/bno055_support.h **** 	bno055.delay_msec = BNO055_delay_msek;
+ 821              		.loc 1 490 0
+ 822 0010 1861     		str	r0, [r3, #16]
+ 491:Inc/bno055_support.h **** 	bno055.dev_addr = BNO055_I2C_ADDR1;
+ 823              		.loc 1 491 0
+ 824 0012 5961     		str	r1, [r3, #20]
+ 495:Inc/bno055_support.h **** 
+ 825              		.loc 1 495 0
+ 826 0014 0020     		movs	r0, #0
+ 827 0016 5DF8044B 		ldr	r4, [sp], #4
+ 828              	.LCFI11:
+ 829              		.cfi_restore 4
+ 830              		.cfi_def_cfa_offset 0
+ 831 001a 7047     		bx	lr
+ 832              	.L21:
+ 833              		.align	2
+ 834              	.L20:
+ 835 001c 00000000 		.word	bno055
+ 836 0020 00000000 		.word	BNO055_I2C_bus_read
+ 837 0024 00000000 		.word	BNO055_I2C_bus_write
+ARM GAS  /tmp/ccAE1LFE.s 			page 28
+
+
+ 838 0028 00000000 		.word	BNO055_delay_msek
+ 839              		.cfi_endproc
+ 840              	.LFE65:
+ 842              		.global	__aeabi_dmul
+ 843              		.global	__aeabi_d2iz
+ 844              		.section	.text.usrMain,"ax",%progbits
+ 845              		.align	2
+ 846              		.global	usrMain
+ 847              		.thumb
+ 848              		.thumb_func
+ 850              	usrMain:
+ 851              	.LFB70:
+  27:Src/usrMain.c **** 
+  28:Src/usrMain.c **** #include "bno055_support.h"
+  29:Src/usrMain.c **** 
+  30:Src/usrMain.c **** #define PRIMARY_ADDRESS 400
+  31:Src/usrMain.c **** #define ADDRESSES_SIZE 1
+  32:Src/usrMain.c **** static const uint16_t myAddresses[ADDRESSES_SIZE] = {
+  33:Src/usrMain.c **** 	PRIMARY_ADDRESS
+  34:Src/usrMain.c **** };
+  35:Src/usrMain.c **** #define HEADERS_SIZE 1
+  36:Src/usrMain.c **** static const uint8_t handledHeaders[HEADERS_SIZE] = {
+  37:Src/usrMain.c **** 	100 //period
+  38:Src/usrMain.c **** };
+  39:Src/usrMain.c **** 
+  40:Src/usrMain.c **** static uint32_t sendPeriodMs = 100;
+  41:Src/usrMain.c **** 
+  42:Src/usrMain.c **** static inline void handleMessage(const CanterosMessage* m)
+  43:Src/usrMain.c **** {
+  44:Src/usrMain.c **** 	if (m->header == 100) { //set period
+  45:Src/usrMain.c **** 		sendPeriodMs = (m->payload[0] << 8) | m->payload[1];
+  46:Src/usrMain.c **** 	}
+  47:Src/usrMain.c **** }
+  48:Src/usrMain.c **** 
+  49:Src/usrMain.c **** int usrMain()
+  50:Src/usrMain.c **** {
+ 852              		.loc 2 50 0
+ 853              		.cfi_startproc
+ 854              		@ args = 0, pretend = 0, frame = 56
+ 855              		@ frame_needed = 0, uses_anonymous_args = 0
+ 856              	.LVL161:
+ 857 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+ 858              	.LCFI12:
+ 859              		.cfi_def_cfa_offset 24
+ 860              		.cfi_offset 4, -24
+ 861              		.cfi_offset 5, -20
+ 862              		.cfi_offset 6, -16
+ 863              		.cfi_offset 7, -12
+ 864              		.cfi_offset 8, -8
+ 865              		.cfi_offset 14, -4
+ 866              	.LBB22:
+  51:Src/usrMain.c **** 	for (int i = 1; i <= 3; ++i)
+  52:Src/usrMain.c **** 		led(i, 0);
+ 867              		.loc 2 52 0
+ 868 0004 0120     		movs	r0, #1
+ 869              	.LBE22:
+  50:Src/usrMain.c **** 	for (int i = 1; i <= 3; ++i)
+ARM GAS  /tmp/ccAE1LFE.s 			page 29
+
+
+ 870              		.loc 2 50 0
+ 871 0006 92B0     		sub	sp, sp, #72
+ 872              	.LCFI13:
+ 873              		.cfi_def_cfa_offset 96
+ 874              	.LBB23:
+ 875              		.loc 2 52 0
+ 876 0008 0021     		movs	r1, #0
+ 877 000a FFF7FEFF 		bl	led
+ 878              	.LVL162:
+ 879 000e 0220     		movs	r0, #2
+ 880 0010 0021     		movs	r1, #0
+ 881 0012 FFF7FEFF 		bl	led
+ 882              	.LVL163:
+ 883 0016 0320     		movs	r0, #3
+ 884 0018 0021     		movs	r1, #0
+ 885 001a FFF7FEFF 		bl	led
+ 886              	.LVL164:
+ 887              	.LBE23:
+  53:Src/usrMain.c **** 	HAL_Delay(500);
+ 888              		.loc 2 53 0
+ 889 001e 4FF4FA70 		mov	r0, #500
+ 890 0022 FFF7FEFF 		bl	HAL_Delay
+ 891              	.LVL165:
+ 892              	.LBB24:
+  54:Src/usrMain.c **** 
+  55:Src/usrMain.c **** 	for (int i = 1; i <= 3; ++i) {
+ 893              		.loc 2 55 0
+ 894 0026 0124     		movs	r4, #1
+ 895              	.LVL166:
+ 896              	.L23:
+  56:Src/usrMain.c **** 		led(i, 1);
+ 897              		.loc 2 56 0 discriminator 3
+ 898 0028 E0B2     		uxtb	r0, r4
+ 899 002a 0121     		movs	r1, #1
+  55:Src/usrMain.c **** 		led(i, 1);
+ 900              		.loc 2 55 0 discriminator 3
+ 901 002c 0C44     		add	r4, r4, r1
+ 902              	.LVL167:
+ 903              		.loc 2 56 0 discriminator 3
+ 904 002e FFF7FEFF 		bl	led
+ 905              	.LVL168:
+  57:Src/usrMain.c **** 		HAL_Delay(100); 
+ 906              		.loc 2 57 0 discriminator 3
+ 907 0032 6420     		movs	r0, #100
+ 908 0034 FFF7FEFF 		bl	HAL_Delay
+ 909              	.LVL169:
+  55:Src/usrMain.c **** 		led(i, 1);
+ 910              		.loc 2 55 0 discriminator 3
+ 911 0038 042C     		cmp	r4, #4
+ 912 003a F5D1     		bne	.L23
+ 913 003c 0324     		movs	r4, #3
+ 914              	.LVL170:
+ 915              	.L24:
+ 916              	.LBE24:
+ 917              	.LBB25:
+  58:Src/usrMain.c **** 	}
+  59:Src/usrMain.c **** 	for (int i = 3; i >= 1; --i) {
+ARM GAS  /tmp/ccAE1LFE.s 			page 30
+
+
+  60:Src/usrMain.c **** 		led(i, 0);
+ 918              		.loc 2 60 0 discriminator 3
+ 919 003e E0B2     		uxtb	r0, r4
+ 920 0040 0021     		movs	r1, #0
+ 921 0042 FFF7FEFF 		bl	led
+ 922              	.LVL171:
+  61:Src/usrMain.c **** 		HAL_Delay(100);
+ 923              		.loc 2 61 0 discriminator 3
+ 924 0046 6420     		movs	r0, #100
+ 925 0048 FFF7FEFF 		bl	HAL_Delay
+ 926              	.LVL172:
+  59:Src/usrMain.c **** 		led(i, 0);
+ 927              		.loc 2 59 0 discriminator 3
+ 928 004c 013C     		subs	r4, r4, #1
+ 929              	.LVL173:
+ 930 004e F6D1     		bne	.L24
+ 931              	.LBE25:
+  62:Src/usrMain.c **** 	}
+  63:Src/usrMain.c **** 
+  64:Src/usrMain.c **** 	printf("test\r\n");
+  65:Src/usrMain.c **** 	uint8_t reg_data[5] = {0,0,0,0,0};
+  66:Src/usrMain.c **** 	HAL_I2C_Mem_Read(i2c1Handle, 0x28 << 1, 0, 1, reg_data, 1, 100);
+ 932              		.loc 2 66 0
+ 933 0050 DFF81882 		ldr	r8, .L43+52
+ 934 0054 0125     		movs	r5, #1
+ 935 0056 6426     		movs	r6, #100
+ 936 0058 05AF     		add	r7, sp, #20
+  64:Src/usrMain.c **** 	uint8_t reg_data[5] = {0,0,0,0,0};
+ 937              		.loc 2 64 0
+ 938 005a 7748     		ldr	r0, .L43
+ 939 005c FFF7FEFF 		bl	puts
+ 940              	.LVL174:
+ 941              		.loc 2 66 0
+ 942 0060 D8F80000 		ldr	r0, [r8]
+ 943 0064 2B46     		mov	r3, r5
+ 944 0066 0097     		str	r7, [sp]
+ 945 0068 0195     		str	r5, [sp, #4]
+ 946 006a 0296     		str	r6, [sp, #8]
+ 947 006c 5021     		movs	r1, #80
+ 948 006e 2246     		mov	r2, r4
+  65:Src/usrMain.c **** 	HAL_I2C_Mem_Read(i2c1Handle, 0x28 << 1, 0, 1, reg_data, 1, 100);
+ 949              		.loc 2 65 0
+ 950 0070 8DF81440 		strb	r4, [sp, #20]
+ 951 0074 8DF81540 		strb	r4, [sp, #21]
+ 952 0078 8DF81640 		strb	r4, [sp, #22]
+ 953 007c 8DF81740 		strb	r4, [sp, #23]
+ 954 0080 8DF81840 		strb	r4, [sp, #24]
+ 955              		.loc 2 66 0
+ 956 0084 FFF7FEFF 		bl	HAL_I2C_Mem_Read
+ 957              	.LVL175:
+  67:Src/usrMain.c **** 	HAL_I2C_Mem_Read(i2c1Handle, 0x28 << 1, 1, 1, reg_data + 1, 1, 100);
+ 958              		.loc 2 67 0
+ 959 0088 0DF11501 		add	r1, sp, #21
+ 960 008c D8F80000 		ldr	r0, [r8]
+ 961 0090 2A46     		mov	r2, r5
+ 962 0092 2B46     		mov	r3, r5
+ 963 0094 0195     		str	r5, [sp, #4]
+ARM GAS  /tmp/ccAE1LFE.s 			page 31
+
+
+ 964 0096 0296     		str	r6, [sp, #8]
+ 965 0098 0091     		str	r1, [sp]
+ 966 009a 5021     		movs	r1, #80
+ 967 009c FFF7FEFF 		bl	HAL_I2C_Mem_Read
+ 968              	.LVL176:
+  68:Src/usrMain.c **** 	HAL_I2C_Mem_Read(i2c1Handle, 0x28 << 1, 2, 1, reg_data + 2, 1, 100);
+ 969              		.loc 2 68 0
+ 970 00a0 0DF11602 		add	r2, sp, #22
+ 971 00a4 D8F80000 		ldr	r0, [r8]
+ 972 00a8 2B46     		mov	r3, r5
+ 973 00aa 0195     		str	r5, [sp, #4]
+ 974 00ac 0296     		str	r6, [sp, #8]
+ 975 00ae 0092     		str	r2, [sp]
+ 976 00b0 5021     		movs	r1, #80
+ 977 00b2 0222     		movs	r2, #2
+ 978 00b4 FFF7FEFF 		bl	HAL_I2C_Mem_Read
+ 979              	.LVL177:
+  69:Src/usrMain.c **** 	printf("ID b b b  : %d %d %d\r\n", (uint8_t)(reg_data[0]), (uint8_t)(reg_data[1]), (uint8_t)(reg_d
+ 980              		.loc 2 69 0
+ 981 00b8 9DF81410 		ldrb	r1, [sp, #20]	@ zero_extendqisi2
+ 982 00bc 9DF81520 		ldrb	r2, [sp, #21]	@ zero_extendqisi2
+ 983 00c0 9DF81630 		ldrb	r3, [sp, #22]	@ zero_extendqisi2
+ 984 00c4 5D48     		ldr	r0, .L43+4
+ 985 00c6 FFF7FEFF 		bl	printf
+ 986              	.LVL178:
+  70:Src/usrMain.c **** 	reg_data[0] = 0;
+  71:Src/usrMain.c **** 	reg_data[1] = 0;
+  72:Src/usrMain.c **** 	reg_data[2] = 0;
+  73:Src/usrMain.c **** 	HAL_I2C_Mem_Read(i2c1Handle, 0x28 << 1, 0, 1, reg_data, 3, 100);
+ 987              		.loc 2 73 0
+ 988 00ca 0322     		movs	r2, #3
+ 989 00cc D8F80000 		ldr	r0, [r8]
+ 990 00d0 2B46     		mov	r3, r5
+ 991 00d2 0097     		str	r7, [sp]
+ 992 00d4 0296     		str	r6, [sp, #8]
+ 993 00d6 0192     		str	r2, [sp, #4]
+ 994 00d8 5021     		movs	r1, #80
+ 995 00da 2246     		mov	r2, r4
+ 996              	.LBB26:
+ 997              	.LBB27:
+ 489:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 998              		.loc 1 489 0
+ 999 00dc 584E     		ldr	r6, .L43+8
+ 1000              	.LBE27:
+ 1001              	.LBE26:
+  70:Src/usrMain.c **** 	reg_data[0] = 0;
+ 1002              		.loc 2 70 0
+ 1003 00de 8DF81440 		strb	r4, [sp, #20]
+  71:Src/usrMain.c **** 	reg_data[2] = 0;
+ 1004              		.loc 2 71 0
+ 1005 00e2 8DF81540 		strb	r4, [sp, #21]
+  72:Src/usrMain.c **** 	HAL_I2C_Mem_Read(i2c1Handle, 0x28 << 1, 0, 1, reg_data, 3, 100);
+ 1006              		.loc 2 72 0
+ 1007 00e6 8DF81640 		strb	r4, [sp, #22]
+ 1008              		.loc 2 73 0
+ 1009 00ea FFF7FEFF 		bl	HAL_I2C_Mem_Read
+ 1010              	.LVL179:
+ARM GAS  /tmp/ccAE1LFE.s 			page 32
+
+
+  74:Src/usrMain.c **** 	printf("ID at once: %d %d %d\r\n", (uint8_t)(reg_data[0]), (uint8_t)(reg_data[1]), (uint8_t)(reg_d
+ 1011              		.loc 2 74 0
+ 1012 00ee 9DF81410 		ldrb	r1, [sp, #20]	@ zero_extendqisi2
+ 1013 00f2 9DF81520 		ldrb	r2, [sp, #21]	@ zero_extendqisi2
+ 1014 00f6 9DF81630 		ldrb	r3, [sp, #22]	@ zero_extendqisi2
+ 1015 00fa 5248     		ldr	r0, .L43+12
+ 1016 00fc FFF7FEFF 		bl	printf
+ 1017              	.LVL180:
+ 1018              	.LBB30:
+ 1019              	.LBB28:
+ 489:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 1020              		.loc 1 489 0
+ 1021 0100 514F     		ldr	r7, .L43+16
+ 491:Inc/bno055_support.h **** 	bno055.dev_addr = BNO055_I2C_ADDR1;
+ 1022              		.loc 1 491 0
+ 1023 0102 524A     		ldr	r2, .L43+20
+ 490:Inc/bno055_support.h **** 	bno055.delay_msec = BNO055_delay_msek;
+ 1024              		.loc 1 490 0
+ 1025 0104 5249     		ldr	r1, .L43+24
+ 492:Inc/bno055_support.h **** 
+ 1026              		.loc 1 492 0
+ 1027 0106 2823     		movs	r3, #40
+ 1028              	.LBE28:
+ 1029              	.LBE30:
+  75:Src/usrMain.c **** 
+  76:Src/usrMain.c **** 
+  77:Src/usrMain.c **** 	I2C_routine();
+  78:Src/usrMain.c **** 	bno055_init(&bno055);
+ 1030              		.loc 2 78 0
+ 1031 0108 3046     		mov	r0, r6
+ 1032              	.LBB31:
+ 1033              	.LBB29:
+ 491:Inc/bno055_support.h **** 	bno055.dev_addr = BNO055_I2C_ADDR1;
+ 1034              		.loc 1 491 0
+ 1035 010a 7261     		str	r2, [r6, #20]
+ 492:Inc/bno055_support.h **** 
+ 1036              		.loc 1 492 0
+ 1037 010c 7372     		strb	r3, [r6, #9]
+ 489:Inc/bno055_support.h **** 	bno055.bus_read = BNO055_I2C_bus_read;
+ 1038              		.loc 1 489 0
+ 1039 010e F760     		str	r7, [r6, #12]
+ 490:Inc/bno055_support.h **** 	bno055.delay_msec = BNO055_delay_msek;
+ 1040              		.loc 1 490 0
+ 1041 0110 3161     		str	r1, [r6, #16]
+ 1042              	.LBE29:
+ 1043              	.LBE31:
+ 1044              		.loc 2 78 0
+ 1045 0112 FFF7FEFF 		bl	bno055_init
+ 1046              	.LVL181:
+  79:Src/usrMain.c **** 	printf("libread: %d\r\n", (uint8_t)(bno055.chip_id));
+ 1047              		.loc 2 79 0
+ 1048 0116 3178     		ldrb	r1, [r6]	@ zero_extendqisi2
+ 1049 0118 4E48     		ldr	r0, .L43+28
+ 1050 011a FFF7FEFF 		bl	printf
+ 1051              	.LVL182:
+  80:Src/usrMain.c **** 	bno055_set_power_mode(BNO055_POWER_MODE_NORMAL);
+ 1052              		.loc 2 80 0
+ARM GAS  /tmp/ccAE1LFE.s 			page 33
+
+
+ 1053 011e 2046     		mov	r0, r4
+ 1054 0120 FFF7FEFF 		bl	bno055_set_power_mode
+ 1055              	.LVL183:
+  81:Src/usrMain.c **** 	bno055_set_operation_mode(BNO055_OPERATION_MODE_AMG);
+ 1056              		.loc 2 81 0
+ 1057 0124 0720     		movs	r0, #7
+ 1058 0126 FFF7FEFF 		bl	bno055_set_operation_mode
+ 1059              	.LVL184:
+  82:Src/usrMain.c **** 
+  83:Src/usrMain.c **** 	HAL_Delay(500);
+ 1060              		.loc 2 83 0
+ 1061 012a 4FF4FA70 		mov	r0, #500
+ 1062 012e FFF7FEFF 		bl	HAL_Delay
+ 1063              	.LVL185:
+  84:Src/usrMain.c **** 
+  85:Src/usrMain.c **** 	struct bno055_accel_t accel_xyz;
+  86:Src/usrMain.c **** 	bno055_read_accel_xyz(&accel_xyz);
+ 1064              		.loc 2 86 0
+ 1065 0132 07A8     		add	r0, sp, #28
+ 1066 0134 FFF7FEFF 		bl	bno055_read_accel_xyz
+ 1067              	.LVL186:
+  87:Src/usrMain.c ****     printf("accel: %d, %d, %d", (int)(accel_xyz.x), (int)(accel_xyz.y), (int)(accel_xyz.z));
+ 1068              		.loc 2 87 0
+ 1069 0138 BDF91C10 		ldrsh	r1, [sp, #28]
+ 1070 013c BDF91E20 		ldrsh	r2, [sp, #30]
+ 1071 0140 BDF92030 		ldrsh	r3, [sp, #32]
+ 1072 0144 4448     		ldr	r0, .L43+32
+ 1073 0146 FFF7FEFF 		bl	printf
+ 1074              	.LVL187:
+  88:Src/usrMain.c **** 	
+  89:Src/usrMain.c **** 	bno055_set_operation_mode(BNO055_OPERATION_MODE_NDOF);
+ 1075              		.loc 2 89 0
+ 1076 014a 0C20     		movs	r0, #12
+ 1077 014c FFF7FEFF 		bl	bno055_set_operation_mode
+ 1078              	.LVL188:
+  90:Src/usrMain.c **** 	struct bno055_euler_double_t d_euler_hpr;
+  91:Src/usrMain.c **** 
+  92:Src/usrMain.c **** 	configCanteros(PRIMARY_ADDRESS, ADDRESSES_SIZE, myAddresses, HEADERS_SIZE, handledHeaders);
+ 1079              		.loc 2 92 0
+ 1080 0150 424A     		ldr	r2, .L43+36
+ 1081 0152 2B46     		mov	r3, r5
+ 1082 0154 2946     		mov	r1, r5
+ 1083 0156 0092     		str	r2, [sp]
+ 1084 0158 4FF4C870 		mov	r0, #400
+ 1085 015c 404A     		ldr	r2, .L43+40
+ 1086 015e FFF7FEFF 		bl	configCanteros
+ 1087              	.LVL189:
+  93:Src/usrMain.c **** 	canInit(CANMODE_CANTEROS, CANMODE_OFF);
+ 1088              		.loc 2 93 0
+ 1089 0162 2146     		mov	r1, r4
+ 1090 0164 0220     		movs	r0, #2
+ 1091 0166 FFF7FEFF 		bl	canInit
+ 1092              	.LVL190:
+  94:Src/usrMain.c **** 	canterosInit();
+ 1093              		.loc 2 94 0
+ 1094 016a FFF7FEFF 		bl	canterosInit
+ 1095              	.LVL191:
+ARM GAS  /tmp/ccAE1LFE.s 			page 34
+
+
+  95:Src/usrMain.c **** 
+  96:Src/usrMain.c **** 	uint32_t lastSendMs = HAL_GetTick();
+ 1096              		.loc 2 96 0
+ 1097 016e FFF7FEFF 		bl	HAL_GetTick
+ 1098              	.LVL192:
+ 1099 0172 3C4E     		ldr	r6, .L43+44
+ 1100 0174 0546     		mov	r5, r0
+ 1101              	.LVL193:
+ 1102              	.LBB32:
+ 1103              	.LBB33:
+  97:Src/usrMain.c **** 	while (1) {
+  98:Src/usrMain.c **** 		canterosProcess();
+  99:Src/usrMain.c **** 		if (canterosCheckInbox()) {
+ 100:Src/usrMain.c **** 			CanterosMessage message;
+ 101:Src/usrMain.c **** 			canterosGetNew(&message);
+ 102:Src/usrMain.c **** 			handleMessage(&message);
+ 103:Src/usrMain.c **** 		}
+ 104:Src/usrMain.c **** 
+ 105:Src/usrMain.c **** 		uint32_t nowMs = HAL_GetTick();
+ 106:Src/usrMain.c **** 		if (nowMs - lastSendMs > sendPeriodMs) {
+ 107:Src/usrMain.c **** 			lastSendMs = nowMs;
+ 108:Src/usrMain.c **** 
+ 109:Src/usrMain.c **** 			bno055_convert_double_euler_hpr_deg(&d_euler_hpr);
+ 110:Src/usrMain.c **** 
+ 111:Src/usrMain.c **** 			CanterosMessage toSend;
+ 112:Src/usrMain.c **** 			toSend.header = 106;
+ 1104              		.loc 2 112 0
+ 1105 0176 4FF06A08 		mov	r8, #106
+ 113:Src/usrMain.c **** 			toSend.payloadSize = 6;
+ 1106              		.loc 2 113 0
+ 1107 017a 0627     		movs	r7, #6
+ 1108 017c 06E0     		b	.L27
+ 1109              	.LVL194:
+ 1110              	.L25:
+ 1111              	.LBE33:
+ 105:Src/usrMain.c **** 		if (nowMs - lastSendMs > sendPeriodMs) {
+ 1112              		.loc 2 105 0
+ 1113 017e FFF7FEFF 		bl	HAL_GetTick
+ 1114              	.LVL195:
+ 106:Src/usrMain.c **** 			lastSendMs = nowMs;
+ 1115              		.loc 2 106 0
+ 1116 0182 3368     		ldr	r3, [r6]
+ 1117 0184 421B     		subs	r2, r0, r5
+ 1118 0186 9A42     		cmp	r2, r3
+ 105:Src/usrMain.c **** 		if (nowMs - lastSendMs > sendPeriodMs) {
+ 1119              		.loc 2 105 0
+ 1120 0188 0446     		mov	r4, r0
+ 1121              	.LVL196:
+ 106:Src/usrMain.c **** 			lastSendMs = nowMs;
+ 1122              		.loc 2 106 0
+ 1123 018a 14D8     		bhi	.L41
+ 1124              	.LVL197:
+ 1125              	.L27:
+  98:Src/usrMain.c **** 		if (canterosCheckInbox()) {
+ 1126              		.loc 2 98 0
+ 1127 018c FFF7FEFF 		bl	canterosProcess
+ 1128              	.LVL198:
+ARM GAS  /tmp/ccAE1LFE.s 			page 35
+
+
+  99:Src/usrMain.c **** 			CanterosMessage message;
+ 1129              		.loc 2 99 0
+ 1130 0190 FFF7FEFF 		bl	canterosCheckInbox
+ 1131              	.LVL199:
+ 1132 0194 0028     		cmp	r0, #0
+ 1133 0196 F2D0     		beq	.L25
+ 1134              	.LBB34:
+ 101:Src/usrMain.c **** 			handleMessage(&message);
+ 1135              		.loc 2 101 0
+ 1136 0198 09A8     		add	r0, sp, #36
+ 1137 019a FFF7FEFF 		bl	canterosGetNew
+ 1138              	.LVL200:
+ 1139              	.LBB35:
+ 1140              	.LBB36:
+  44:Src/usrMain.c **** 		sendPeriodMs = (m->payload[0] << 8) | m->payload[1];
+ 1141              		.loc 2 44 0
+ 1142 019e 9DF82630 		ldrb	r3, [sp, #38]	@ zero_extendqisi2
+ 1143 01a2 642B     		cmp	r3, #100
+ 1144 01a4 EBD1     		bne	.L25
+  45:Src/usrMain.c **** 	}
+ 1145              		.loc 2 45 0
+ 1146 01a6 9DF82820 		ldrb	r2, [sp, #40]	@ zero_extendqisi2
+ 1147 01aa 9DF82930 		ldrb	r3, [sp, #41]	@ zero_extendqisi2
+ 1148 01ae 43EA0223 		orr	r3, r3, r2, lsl #8
+ 1149 01b2 3360     		str	r3, [r6]
+ 1150 01b4 E3E7     		b	.L25
+ 1151              	.LVL201:
+ 1152              	.L41:
+ 1153              	.LBE36:
+ 1154              	.LBE35:
+ 1155              	.LBE34:
+ 1156              	.LBB37:
+ 109:Src/usrMain.c **** 
+ 1157              		.loc 2 109 0
+ 1158 01b6 0CA8     		add	r0, sp, #48
+ 1159              	.LVL202:
+ 1160 01b8 FFF7FEFF 		bl	bno055_convert_double_euler_hpr_deg
+ 1161              	.LVL203:
+ 114:Src/usrMain.c **** 			toSend.payload[0] = ((int16_t)(d_euler_hpr.p*10)) >> 8;
+ 1162              		.loc 2 114 0
+ 1163 01bc DDE91001 		ldrd	r0, [sp, #64]
+ 1164 01c0 0022     		movs	r2, #0
+ 1165 01c2 294B     		ldr	r3, .L43+48
+ 112:Src/usrMain.c **** 			toSend.payloadSize = 6;
+ 1166              		.loc 2 112 0
+ 1167 01c4 8DF82680 		strb	r8, [sp, #38]
+ 113:Src/usrMain.c **** 			toSend.payload[0] = ((int16_t)(d_euler_hpr.p*10)) >> 8;
+ 1168              		.loc 2 113 0
+ 1169 01c8 8DF82770 		strb	r7, [sp, #39]
+ 1170              		.loc 2 114 0
+ 1171 01cc FFF7FEFF 		bl	__aeabi_dmul
+ 1172              	.LVL204:
+ 1173 01d0 FFF7FEFF 		bl	__aeabi_d2iz
+ 1174              	.LVL205:
+ 1175 01d4 85B2     		uxth	r5, r0
+ 1176 01d6 45F3072E 		sbfx	lr, r5, #8, #8
+ 115:Src/usrMain.c **** 			toSend.payload[1] = ((int16_t)(d_euler_hpr.p*10)) & 0xff;
+ARM GAS  /tmp/ccAE1LFE.s 			page 36
+
+
+ 116:Src/usrMain.c **** 			toSend.payload[2] = ((int16_t)(d_euler_hpr.r*10)) >> 8;
+ 1177              		.loc 2 116 0
+ 1178 01da 0022     		movs	r2, #0
+ 1179 01dc 224B     		ldr	r3, .L43+48
+ 1180 01de DDE90E01 		ldrd	r0, [sp, #56]
+ 114:Src/usrMain.c **** 			toSend.payload[1] = ((int16_t)(d_euler_hpr.p*10)) & 0xff;
+ 1181              		.loc 2 114 0
+ 1182 01e2 8DF828E0 		strb	lr, [sp, #40]
+ 115:Src/usrMain.c **** 			toSend.payload[1] = ((int16_t)(d_euler_hpr.p*10)) & 0xff;
+ 1183              		.loc 2 115 0
+ 1184 01e6 8DF82950 		strb	r5, [sp, #41]
+ 1185              		.loc 2 116 0
+ 1186 01ea FFF7FEFF 		bl	__aeabi_dmul
+ 1187              	.LVL206:
+ 1188 01ee FFF7FEFF 		bl	__aeabi_d2iz
+ 1189              	.LVL207:
+ 1190 01f2 85B2     		uxth	r5, r0
+ 1191 01f4 45F3072E 		sbfx	lr, r5, #8, #8
+ 117:Src/usrMain.c **** 			toSend.payload[3] = ((int16_t)(d_euler_hpr.r*10)) & 0xff;
+ 118:Src/usrMain.c **** 			toSend.payload[4] = ((int16_t)(d_euler_hpr.h*10)) >> 8;
+ 1192              		.loc 2 118 0
+ 1193 01f8 0022     		movs	r2, #0
+ 1194 01fa 1B4B     		ldr	r3, .L43+48
+ 1195 01fc DDE90C01 		ldrd	r0, [sp, #48]
+ 116:Src/usrMain.c **** 			toSend.payload[3] = ((int16_t)(d_euler_hpr.r*10)) & 0xff;
+ 1196              		.loc 2 116 0
+ 1197 0200 8DF82AE0 		strb	lr, [sp, #42]
+ 117:Src/usrMain.c **** 			toSend.payload[3] = ((int16_t)(d_euler_hpr.r*10)) & 0xff;
+ 1198              		.loc 2 117 0
+ 1199 0204 8DF82B50 		strb	r5, [sp, #43]
+ 1200              		.loc 2 118 0
+ 1201 0208 FFF7FEFF 		bl	__aeabi_dmul
+ 1202              	.LVL208:
+ 1203 020c FFF7FEFF 		bl	__aeabi_d2iz
+ 1204              	.LVL209:
+ 1205 0210 83B2     		uxth	r3, r0
+ 1206 0212 43F30722 		sbfx	r2, r3, #8, #8
+ 119:Src/usrMain.c **** 			toSend.payload[5] = ((int16_t)(d_euler_hpr.h*10)) & 0xff;
+ 120:Src/usrMain.c **** 			HAL_StatusTypeDef res = canterosSendMessage(&toSend);
+ 1207              		.loc 2 120 0
+ 1208 0216 09A8     		add	r0, sp, #36
+ 119:Src/usrMain.c **** 			toSend.payload[5] = ((int16_t)(d_euler_hpr.h*10)) & 0xff;
+ 1209              		.loc 2 119 0
+ 1210 0218 8DF82D30 		strb	r3, [sp, #45]
+ 118:Src/usrMain.c **** 			toSend.payload[5] = ((int16_t)(d_euler_hpr.h*10)) & 0xff;
+ 1211              		.loc 2 118 0
+ 1212 021c 8DF82C20 		strb	r2, [sp, #44]
+ 1213              		.loc 2 120 0
+ 1214 0220 FFF7FEFF 		bl	canterosSendMessage
+ 1215              	.LVL210:
+ 121:Src/usrMain.c **** 			if (res)
+ 1216              		.loc 2 121 0
+ 1217 0224 08B9     		cbnz	r0, .L42
+ 1218              	.LBE37:
+ 105:Src/usrMain.c **** 		if (nowMs - lastSendMs > sendPeriodMs) {
+ 1219              		.loc 2 105 0
+ 1220 0226 2546     		mov	r5, r4
+ARM GAS  /tmp/ccAE1LFE.s 			page 37
+
+
+ 1221 0228 B0E7     		b	.L27
+ 1222              	.L42:
+ 1223              	.LBB38:
+ 122:Src/usrMain.c **** 				led(2, 1);
+ 1224              		.loc 2 122 0
+ 1225 022a 0220     		movs	r0, #2
+ 1226              	.LVL211:
+ 1227 022c 0121     		movs	r1, #1
+ 1228 022e FFF7FEFF 		bl	led
+ 1229              	.LVL212:
+ 1230              	.LBE38:
+ 105:Src/usrMain.c **** 		if (nowMs - lastSendMs > sendPeriodMs) {
+ 1231              		.loc 2 105 0
+ 1232 0232 2546     		mov	r5, r4
+ 1233 0234 AAE7     		b	.L27
+ 1234              	.L44:
+ 1235 0236 00BF     		.align	2
+ 1236              	.L43:
+ 1237 0238 18000000 		.word	.LC1
+ 1238 023c 20000000 		.word	.LC2
+ 1239 0240 00000000 		.word	bno055
+ 1240 0244 38000000 		.word	.LC3
+ 1241 0248 00000000 		.word	BNO055_I2C_bus_write
+ 1242 024c 00000000 		.word	BNO055_delay_msek
+ 1243 0250 00000000 		.word	BNO055_I2C_bus_read
+ 1244 0254 50000000 		.word	.LC4
+ 1245 0258 60000000 		.word	.LC5
+ 1246 025c 00000000 		.word	.LANCHOR1
+ 1247 0260 00000000 		.word	.LANCHOR0
+ 1248 0264 00000000 		.word	.LANCHOR2
+ 1249 0268 00002440 		.word	1076101120
+ 1250 026c 00000000 		.word	i2c1Handle
+ 1251              	.LBE32:
+ 1252              		.cfi_endproc
+ 1253              	.LFE70:
+ 1255              		.comm	bno055,24,4
+ 1256              		.section	.rodata.myAddresses,"a",%progbits
+ 1257              		.align	2
+ 1258              		.set	.LANCHOR0,. + 0
+ 1261              	myAddresses:
+ 1262 0000 9001     		.short	400
+ 1263              		.section	.data.sendPeriodMs,"aw",%progbits
+ 1264              		.align	2
+ 1265              		.set	.LANCHOR2,. + 0
+ 1268              	sendPeriodMs:
+ 1269 0000 64000000 		.word	100
+ 1270              		.section	.rodata.str1.4,"aMS",%progbits,1
+ 1271              		.align	2
+ 1272              	.LC0:
+ 1273 0000 65756C65 		.ascii	"euler: (%u, %u, %u)\015\012\000"
+ 1273      723A2028 
+ 1273      25752C20 
+ 1273      25752C20 
+ 1273      2575290D 
+ 1274 0016 0000     		.space	2
+ 1275              	.LC1:
+ 1276 0018 74657374 		.ascii	"test\015\000"
+ARM GAS  /tmp/ccAE1LFE.s 			page 38
+
+
+ 1276      0D00
+ 1277 001e 0000     		.space	2
+ 1278              	.LC2:
+ 1279 0020 49442062 		.ascii	"ID b b b  : %d %d %d\015\012\000"
+ 1279      20622062 
+ 1279      20203A20 
+ 1279      25642025 
+ 1279      64202564 
+ 1280 0037 00       		.space	1
+ 1281              	.LC3:
+ 1282 0038 49442061 		.ascii	"ID at once: %d %d %d\015\012\000"
+ 1282      74206F6E 
+ 1282      63653A20 
+ 1282      25642025 
+ 1282      64202564 
+ 1283 004f 00       		.space	1
+ 1284              	.LC4:
+ 1285 0050 6C696272 		.ascii	"libread: %d\015\012\000"
+ 1285      6561643A 
+ 1285      2025640D 
+ 1285      0A00
+ 1286 005e 0000     		.space	2
+ 1287              	.LC5:
+ 1288 0060 61636365 		.ascii	"accel: %d, %d, %d\000"
+ 1288      6C3A2025 
+ 1288      642C2025 
+ 1288      642C2025 
+ 1288      6400
+ 1289              		.section	.rodata.handledHeaders,"a",%progbits
+ 1290              		.align	2
+ 1291              		.set	.LANCHOR1,. + 0
+ 1294              	handledHeaders:
+ 1295 0000 64       		.byte	100
+ 1296              		.text
+ 1297              	.Letext0:
+ 1298              		.file 3 "/usr/include/newlib/machine/_default_types.h"
+ 1299              		.file 4 "/usr/include/newlib/sys/_stdint.h"
+ 1300              		.file 5 "Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 1301              		.file 6 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 1302              		.file 7 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_dma.h"
+ 1303              		.file 8 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_i2c.h"
+ 1304              		.file 9 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_uart.h"
+ 1305              		.file 10 "Inc/can.h"
+ 1306              		.file 11 "Inc/canteros.h"
+ 1307              		.file 12 "Inc/bno055.h"
+ 1308              		.file 13 "Drivers/CMSIS/Include/core_cm3.h"
+ 1309              		.file 14 "Inc/handles.h"
+ 1310              		.file 15 "/usr/include/newlib/stdio.h"
+ 1311              		.file 16 "Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ 1312              		.file 17 "Inc/globals.h"
+ 1313              		.file 18 "<built-in>"
+ARM GAS  /tmp/ccAE1LFE.s 			page 39
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 usrMain.c
+     /tmp/ccAE1LFE.s:19     .text.BNO055_I2C_bus_write:0000000000000000 $t
+     /tmp/ccAE1LFE.s:24     .text.BNO055_I2C_bus_write:0000000000000000 BNO055_I2C_bus_write
+     /tmp/ccAE1LFE.s:68     .text.BNO055_I2C_bus_write:0000000000000020 $d
+     /tmp/ccAE1LFE.s:73     .text.BNO055_I2C_bus_read:0000000000000000 $t
+     /tmp/ccAE1LFE.s:78     .text.BNO055_I2C_bus_read:0000000000000000 BNO055_I2C_bus_read
+     /tmp/ccAE1LFE.s:121    .text.BNO055_I2C_bus_read:0000000000000020 $d
+     /tmp/ccAE1LFE.s:126    .text.BNO055_delay_msek:0000000000000000 $t
+     /tmp/ccAE1LFE.s:131    .text.BNO055_delay_msek:0000000000000000 BNO055_delay_msek
+     /tmp/ccAE1LFE.s:146    .text._write:0000000000000000 $t
+     /tmp/ccAE1LFE.s:151    .text._write:0000000000000000 _write
+     /tmp/ccAE1LFE.s:179    .text._write:0000000000000014 $d
+     /tmp/ccAE1LFE.s:184    .text.bno055_data_readout_template:0000000000000000 $t
+     /tmp/ccAE1LFE.s:189    .text.bno055_data_readout_template:0000000000000000 bno055_data_readout_template
+     /tmp/ccAE1LFE.s:782    .text.bno055_data_readout_template:000000000000032c $d
+                            *COM*:0000000000000018 bno055
+     /tmp/ccAE1LFE.s:791    .text.I2C_routine:0000000000000000 $t
+     /tmp/ccAE1LFE.s:796    .text.I2C_routine:0000000000000000 I2C_routine
+     /tmp/ccAE1LFE.s:835    .text.I2C_routine:000000000000001c $d
+     /tmp/ccAE1LFE.s:845    .text.usrMain:0000000000000000 $t
+     /tmp/ccAE1LFE.s:850    .text.usrMain:0000000000000000 usrMain
+     /tmp/ccAE1LFE.s:1237   .text.usrMain:0000000000000238 $d
+     /tmp/ccAE1LFE.s:1257   .rodata.myAddresses:0000000000000000 $d
+     /tmp/ccAE1LFE.s:1261   .rodata.myAddresses:0000000000000000 myAddresses
+     /tmp/ccAE1LFE.s:1264   .data.sendPeriodMs:0000000000000000 $d
+     /tmp/ccAE1LFE.s:1268   .data.sendPeriodMs:0000000000000000 sendPeriodMs
+     /tmp/ccAE1LFE.s:1271   .rodata.str1.4:0000000000000000 $d
+     /tmp/ccAE1LFE.s:1290   .rodata.handledHeaders:0000000000000000 $d
+     /tmp/ccAE1LFE.s:1294   .rodata.handledHeaders:0000000000000000 handledHeaders
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+HAL_I2C_Mem_Write
+i2c1Handle
+HAL_I2C_Mem_Read
+HAL_Delay
+HAL_UART_Transmit
+uart1Handle
+bno055_init
+bno055_set_power_mode
+bno055_set_operation_mode
+bno055_read_accel_x
+bno055_read_accel_y
+bno055_read_accel_z
+bno055_read_accel_xyz
+bno055_read_mag_x
+bno055_read_mag_y
+bno055_read_mag_z
+bno055_read_mag_xyz
+bno055_read_gyro_x
+bno055_read_gyro_y
+bno055_read_gyro_z
+bno055_read_gyro_xyz
+bno055_read_euler_h
+bno055_read_euler_r
+bno055_read_euler_p
+ARM GAS  /tmp/ccAE1LFE.s 			page 40
+
+
+bno055_read_euler_hrp
+bno055_read_quaternion_w
+bno055_read_quaternion_x
+bno055_read_quaternion_y
+bno055_read_quaternion_z
+bno055_read_quaternion_wxyz
+bno055_read_linear_accel_x
+bno055_read_linear_accel_y
+bno055_read_linear_accel_z
+bno055_read_linear_accel_xyz
+bno055_read_gravity_x
+bno055_read_gravity_y
+bno055_read_gravity_z
+bno055_read_gravity_xyz
+bno055_convert_double_accel_x_msq
+bno055_convert_double_accel_x_mg
+bno055_convert_double_accel_y_msq
+bno055_convert_double_accel_y_mg
+bno055_convert_double_accel_z_msq
+bno055_convert_double_accel_z_mg
+bno055_convert_double_accel_xyz_msq
+bno055_convert_double_accel_xyz_mg
+bno055_convert_double_mag_x_uT
+bno055_convert_double_mag_y_uT
+bno055_convert_double_mag_z_uT
+bno055_convert_double_mag_xyz_uT
+bno055_convert_double_gyro_x_dps
+bno055_convert_double_gyro_y_dps
+bno055_convert_double_gyro_z_dps
+bno055_convert_double_gyro_x_rps
+bno055_convert_double_gyro_y_rps
+bno055_convert_double_gyro_z_rps
+bno055_convert_double_gyro_xyz_dps
+bno055_convert_double_gyro_xyz_rps
+bno055_convert_double_euler_h_deg
+bno055_convert_double_euler_r_deg
+bno055_convert_double_euler_p_deg
+bno055_convert_double_euler_h_rad
+bno055_convert_double_euler_r_rad
+bno055_convert_double_euler_p_rad
+bno055_convert_double_euler_hpr_deg
+bno055_convert_double_euler_hpr_rad
+bno055_convert_double_linear_accel_x_msq
+bno055_convert_double_linear_accel_y_msq
+bno055_convert_double_linear_accel_z_msq
+bno055_convert_double_linear_accel_xyz_msq
+bno055_convert_gravity_double_x_msq
+bno055_convert_gravity_double_y_msq
+bno055_convert_gravity_double_z_msq
+bno055_convert_double_gravity_xyz_msq
+printf
+__aeabi_dmul
+__aeabi_d2iz
+led
+puts
+configCanteros
+canInit
+ARM GAS  /tmp/ccAE1LFE.s 			page 41
+
+
+canterosInit
+HAL_GetTick
+canterosProcess
+canterosCheckInbox
+canterosGetNew
+canterosSendMessage

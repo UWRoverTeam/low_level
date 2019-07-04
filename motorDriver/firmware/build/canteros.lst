@@ -1,0 +1,906 @@
+ARM GAS  /tmp/ccohbHjq.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"canteros.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.section	.text.isHandled,"ax",%progbits
+  19              		.align	2
+  20              		.thumb
+  21              		.thumb_func
+  23              	isHandled:
+  24              	.LFB63:
+  25              		.file 1 "../../shared/firmware/Src/canteros.c"
+   1:../../shared/firmware/Src/canteros.c **** #include "canteros.h"
+   2:../../shared/firmware/Src/canteros.c **** 
+   3:../../shared/firmware/Src/canteros.c **** static uint16_t PRIMARY_ADDRESS;
+   4:../../shared/firmware/Src/canteros.c **** static uint8_t ADDRESSES_SIZE;
+   5:../../shared/firmware/Src/canteros.c **** static const uint16_t* myAddresses;
+   6:../../shared/firmware/Src/canteros.c **** static uint8_t HEADERS_SIZE;
+   7:../../shared/firmware/Src/canteros.c **** static const uint8_t* handledHeaders;
+   8:../../shared/firmware/Src/canteros.c **** 
+   9:../../shared/firmware/Src/canteros.c **** NodeStatusMessage sendingNodeStatus;
+  10:../../shared/firmware/Src/canteros.c **** 
+  11:../../shared/firmware/Src/canteros.c **** #define CANTEROS_MESSAGE_QUEUE_SIZE 16
+  12:../../shared/firmware/Src/canteros.c **** typedef struct {
+  13:../../shared/firmware/Src/canteros.c **** 	uint8_t head, tail;
+  14:../../shared/firmware/Src/canteros.c **** 	CanterosMessage messages[CANTEROS_MESSAGE_QUEUE_SIZE];
+  15:../../shared/firmware/Src/canteros.c **** } CanterosMessageQueue;
+  16:../../shared/firmware/Src/canteros.c **** static CanterosMessageQueue queue;
+  17:../../shared/firmware/Src/canteros.c **** 
+  18:../../shared/firmware/Src/canteros.c **** 
+  19:../../shared/firmware/Src/canteros.c **** static bool isHandled(uint16_t receiver, uint8_t header)
+  20:../../shared/firmware/Src/canteros.c **** {
+  26              		.loc 1 20 0
+  27              		.cfi_startproc
+  28              		@ args = 0, pretend = 0, frame = 0
+  29              		@ frame_needed = 0, uses_anonymous_args = 0
+  30              		@ link register save eliminated.
+  31              	.LVL0:
+  32 0000 10B4     		push	{r4}
+  33              	.LCFI0:
+  34              		.cfi_def_cfa_offset 4
+  35              		.cfi_offset 4, -4
+  36              	.LVL1:
+  37              	.LBB2:
+  21:../../shared/firmware/Src/canteros.c **** 	bool ok = false;
+ARM GAS  /tmp/ccohbHjq.s 			page 2
+
+
+  22:../../shared/firmware/Src/canteros.c **** 	for (int i = 0; i < ADDRESSES_SIZE; ++i)
+  38              		.loc 1 22 0
+  39 0002 0023     		movs	r3, #0
+  40              	.LBE2:
+  21:../../shared/firmware/Src/canteros.c **** 	bool ok = false;
+  41              		.loc 1 21 0
+  42 0004 1C46     		mov	r4, r3
+  43              	.LBB3:
+  44              		.loc 1 22 0
+  45 0006 07E0     		b	.L2
+  46              	.LVL2:
+  47              	.L4:
+  23:../../shared/firmware/Src/canteros.c **** 		if (receiver == myAddresses[i])
+  48              		.loc 1 23 0
+  49 0008 0F4A     		ldr	r2, .L13
+  50 000a 1268     		ldr	r2, [r2]
+  51 000c 32F81320 		ldrh	r2, [r2, r3, lsl #1]
+  52 0010 8242     		cmp	r2, r0
+  53 0012 00D1     		bne	.L3
+  24:../../shared/firmware/Src/canteros.c **** 			ok = true;
+  54              		.loc 1 24 0
+  55 0014 0124     		movs	r4, #1
+  56              	.LVL3:
+  57              	.L3:
+  22:../../shared/firmware/Src/canteros.c **** 		if (receiver == myAddresses[i])
+  58              		.loc 1 22 0 discriminator 2
+  59 0016 0133     		adds	r3, r3, #1
+  60              	.LVL4:
+  61              	.L2:
+  22:../../shared/firmware/Src/canteros.c **** 		if (receiver == myAddresses[i])
+  62              		.loc 1 22 0 is_stmt 0 discriminator 1
+  63 0018 0C4A     		ldr	r2, .L13+4
+  64 001a 1278     		ldrb	r2, [r2]	@ zero_extendqisi2
+  65 001c 9A42     		cmp	r2, r3
+  66 001e F3DC     		bgt	.L4
+  67              	.LBE3:
+  25:../../shared/firmware/Src/canteros.c **** 	if (!ok)
+  68              		.loc 1 25 0 is_stmt 1
+  69 0020 4CB9     		cbnz	r4, .L10
+  26:../../shared/firmware/Src/canteros.c **** 		return false;
+  70              		.loc 1 26 0
+  71 0022 0020     		movs	r0, #0
+  72              	.LVL5:
+  73 0024 0DE0     		b	.L6
+  74              	.LVL6:
+  75              	.L8:
+  76              	.LBB4:
+  27:../../shared/firmware/Src/canteros.c **** 
+  28:../../shared/firmware/Src/canteros.c **** 	ok = false;
+  29:../../shared/firmware/Src/canteros.c **** 	for (int i = 0; i < HEADERS_SIZE; ++i)
+  30:../../shared/firmware/Src/canteros.c **** 		if (header == handledHeaders[i])
+  77              		.loc 1 30 0
+  78 0026 0A4A     		ldr	r2, .L13+8
+  79 0028 1268     		ldr	r2, [r2]
+  80 002a D25C     		ldrb	r2, [r2, r3]	@ zero_extendqisi2
+  81 002c 8A42     		cmp	r2, r1
+  82 002e 00D1     		bne	.L7
+ARM GAS  /tmp/ccohbHjq.s 			page 3
+
+
+  31:../../shared/firmware/Src/canteros.c **** 			ok = true;
+  83              		.loc 1 31 0
+  84 0030 2046     		mov	r0, r4
+  85              	.LVL7:
+  86              	.L7:
+  29:../../shared/firmware/Src/canteros.c **** 		if (header == handledHeaders[i])
+  87              		.loc 1 29 0 discriminator 2
+  88 0032 0133     		adds	r3, r3, #1
+  89              	.LVL8:
+  90 0034 01E0     		b	.L5
+  91              	.LVL9:
+  92              	.L10:
+  93              	.LBE4:
+  94 0036 0023     		movs	r3, #0
+  95              	.LVL10:
+  96 0038 1846     		mov	r0, r3
+  97              	.LVL11:
+  98              	.L5:
+  99              	.LBB5:
+  29:../../shared/firmware/Src/canteros.c **** 		if (header == handledHeaders[i])
+ 100              		.loc 1 29 0 is_stmt 0 discriminator 1
+ 101 003a 064A     		ldr	r2, .L13+12
+ 102 003c 1278     		ldrb	r2, [r2]	@ zero_extendqisi2
+ 103 003e 9A42     		cmp	r2, r3
+ 104 0040 F1DC     		bgt	.L8
+ 105              	.LVL12:
+ 106              	.L6:
+ 107              	.LBE5:
+  32:../../shared/firmware/Src/canteros.c **** 	return ok;
+  33:../../shared/firmware/Src/canteros.c **** }
+ 108              		.loc 1 33 0 is_stmt 1
+ 109 0042 5DF8044B 		ldr	r4, [sp], #4
+ 110              	.LCFI1:
+ 111              		.cfi_restore 4
+ 112              		.cfi_def_cfa_offset 0
+ 113 0046 7047     		bx	lr
+ 114              	.L14:
+ 115              		.align	2
+ 116              	.L13:
+ 117 0048 00000000 		.word	.LANCHOR0
+ 118 004c 00000000 		.word	.LANCHOR1
+ 119 0050 00000000 		.word	.LANCHOR2
+ 120 0054 00000000 		.word	.LANCHOR3
+ 121              		.cfi_endproc
+ 122              	.LFE63:
+ 124              		.section	.text.configCanteros,"ax",%progbits
+ 125              		.align	2
+ 126              		.global	configCanteros
+ 127              		.thumb
+ 128              		.thumb_func
+ 130              	configCanteros:
+ 131              	.LFB64:
+  34:../../shared/firmware/Src/canteros.c **** 
+  35:../../shared/firmware/Src/canteros.c **** void configCanteros(uint16_t primary, uint8_t addressesSize, const uint16_t* addresses,
+  36:../../shared/firmware/Src/canteros.c ****                     uint8_t headersSize, const uint8_t* headers)
+  37:../../shared/firmware/Src/canteros.c **** {
+ 132              		.loc 1 37 0
+ARM GAS  /tmp/ccohbHjq.s 			page 4
+
+
+ 133              		.cfi_startproc
+ 134              		@ args = 4, pretend = 0, frame = 0
+ 135              		@ frame_needed = 0, uses_anonymous_args = 0
+ 136              	.LVL13:
+ 137 0000 10B5     		push	{r4, lr}
+ 138              	.LCFI2:
+ 139              		.cfi_def_cfa_offset 8
+ 140              		.cfi_offset 4, -8
+ 141              		.cfi_offset 14, -4
+  38:../../shared/firmware/Src/canteros.c **** 	PRIMARY_ADDRESS = primary;
+ 142              		.loc 1 38 0
+ 143 0002 084C     		ldr	r4, .L17
+ 144 0004 2080     		strh	r0, [r4]	@ movhi
+  39:../../shared/firmware/Src/canteros.c **** 	ADDRESSES_SIZE = addressesSize;
+ 145              		.loc 1 39 0
+ 146 0006 0848     		ldr	r0, .L17+4
+ 147              	.LVL14:
+ 148 0008 0170     		strb	r1, [r0]
+  40:../../shared/firmware/Src/canteros.c **** 	myAddresses = addresses;
+ 149              		.loc 1 40 0
+ 150 000a 0848     		ldr	r0, .L17+8
+ 151 000c 0260     		str	r2, [r0]
+  41:../../shared/firmware/Src/canteros.c **** 	HEADERS_SIZE = headersSize;
+ 152              		.loc 1 41 0
+ 153 000e 0848     		ldr	r0, .L17+12
+ 154 0010 0370     		strb	r3, [r0]
+  42:../../shared/firmware/Src/canteros.c **** 	handledHeaders = headers;
+ 155              		.loc 1 42 0
+ 156 0012 084B     		ldr	r3, .L17+16
+ 157              	.LVL15:
+ 158 0014 0298     		ldr	r0, [sp, #8]
+ 159 0016 1860     		str	r0, [r3]
+  43:../../shared/firmware/Src/canteros.c **** 	configCanAddresses(addressesSize, addresses);
+ 160              		.loc 1 43 0
+ 161 0018 0846     		mov	r0, r1
+ 162 001a 1146     		mov	r1, r2
+ 163              	.LVL16:
+ 164 001c FFF7FEFF 		bl	configCanAddresses
+ 165              	.LVL17:
+ 166 0020 10BD     		pop	{r4, pc}
+ 167              	.LVL18:
+ 168              	.L18:
+ 169 0022 00BF     		.align	2
+ 170              	.L17:
+ 171 0024 00000000 		.word	.LANCHOR4
+ 172 0028 00000000 		.word	.LANCHOR1
+ 173 002c 00000000 		.word	.LANCHOR0
+ 174 0030 00000000 		.word	.LANCHOR3
+ 175 0034 00000000 		.word	.LANCHOR2
+ 176              		.cfi_endproc
+ 177              	.LFE64:
+ 179              		.section	.text.canterosInit,"ax",%progbits
+ 180              		.align	2
+ 181              		.global	canterosInit
+ 182              		.thumb
+ 183              		.thumb_func
+ 185              	canterosInit:
+ARM GAS  /tmp/ccohbHjq.s 			page 5
+
+
+ 186              	.LFB65:
+  44:../../shared/firmware/Src/canteros.c **** }
+  45:../../shared/firmware/Src/canteros.c **** 
+  46:../../shared/firmware/Src/canteros.c **** int canterosInit()
+  47:../../shared/firmware/Src/canteros.c **** {
+ 187              		.loc 1 47 0
+ 188              		.cfi_startproc
+ 189              		@ args = 0, pretend = 0, frame = 0
+ 190              		@ frame_needed = 0, uses_anonymous_args = 0
+ 191              		@ link register save eliminated.
+  48:../../shared/firmware/Src/canteros.c **** 	queue.head = 0;
+ 192              		.loc 1 48 0
+ 193 0000 024B     		ldr	r3, .L20
+ 194 0002 0020     		movs	r0, #0
+ 195 0004 1870     		strb	r0, [r3]
+  49:../../shared/firmware/Src/canteros.c **** 	queue.tail = 0;
+ 196              		.loc 1 49 0
+ 197 0006 5870     		strb	r0, [r3, #1]
+  50:../../shared/firmware/Src/canteros.c **** 	return 0;
+  51:../../shared/firmware/Src/canteros.c **** }
+ 198              		.loc 1 51 0
+ 199 0008 7047     		bx	lr
+ 200              	.L21:
+ 201 000a 00BF     		.align	2
+ 202              	.L20:
+ 203 000c 00000000 		.word	.LANCHOR5
+ 204              		.cfi_endproc
+ 205              	.LFE65:
+ 207              		.section	.text.canterosSendMessage,"ax",%progbits
+ 208              		.align	2
+ 209              		.global	canterosSendMessage
+ 210              		.thumb
+ 211              		.thumb_func
+ 213              	canterosSendMessage:
+ 214              	.LFB67:
+  52:../../shared/firmware/Src/canteros.c **** 
+  53:../../shared/firmware/Src/canteros.c **** bool canterosProcess()
+  54:../../shared/firmware/Src/canteros.c **** {
+  55:../../shared/firmware/Src/canteros.c **** 	static uint32_t lastNodeStatusMs = 0;
+  56:../../shared/firmware/Src/canteros.c **** 	uint32_t nowMs = HAL_GetTick();
+  57:../../shared/firmware/Src/canteros.c **** 	if (nowMs - lastNodeStatusMs > 1000) {
+  58:../../shared/firmware/Src/canteros.c **** 		lastNodeStatusMs = nowMs;
+  59:../../shared/firmware/Src/canteros.c **** 		sendingNodeStatus.uptimeSeconds = nowMs / 1000;
+  60:../../shared/firmware/Src/canteros.c **** 
+  61:../../shared/firmware/Src/canteros.c **** 		CanterosMessage toSend;
+  62:../../shared/firmware/Src/canteros.c **** 		toSend.header = NODE_STATUS_HEADER;
+  63:../../shared/firmware/Src/canteros.c **** 		toSend.payloadSize = 7;
+  64:../../shared/firmware/Src/canteros.c **** 		toSend.payload[0] = PRIMARY_ADDRESS >> 3;
+  65:../../shared/firmware/Src/canteros.c **** 		toSend.payload[1] = PRIMARY_ADDRESS << 5;
+  66:../../shared/firmware/Src/canteros.c **** 		toSend.payload[2] = (sendingNodeStatus.uptimeSeconds & 0x00ff0000) >> 16;
+  67:../../shared/firmware/Src/canteros.c **** 		toSend.payload[3] = (sendingNodeStatus.uptimeSeconds & 0x0000ff00) >> 8;
+  68:../../shared/firmware/Src/canteros.c **** 		toSend.payload[4] = (sendingNodeStatus.uptimeSeconds & 0x000000ff) >> 0;
+  69:../../shared/firmware/Src/canteros.c **** 		toSend.payload[5] = (sendingNodeStatus.health << 6) | (sendingNodeStatus.mode << 3) | (sendingNod
+  70:../../shared/firmware/Src/canteros.c **** 		toSend.payload[6] = sendingNodeStatus.deviceSpecificCode;
+  71:../../shared/firmware/Src/canteros.c **** 		HAL_StatusTypeDef res = canterosSendMessage(&toSend);
+  72:../../shared/firmware/Src/canteros.c **** 		if (res) {
+  73:../../shared/firmware/Src/canteros.c **** 			//Error in sending status
+ARM GAS  /tmp/ccohbHjq.s 			page 6
+
+
+  74:../../shared/firmware/Src/canteros.c **** 			led(2, 1);
+  75:../../shared/firmware/Src/canteros.c **** 		}
+  76:../../shared/firmware/Src/canteros.c **** 	}
+  77:../../shared/firmware/Src/canteros.c **** 
+  78:../../shared/firmware/Src/canteros.c **** 	bool gotNew = false;
+  79:../../shared/firmware/Src/canteros.c **** 	while (canCheckInbox(can1Handle)) {
+  80:../../shared/firmware/Src/canteros.c **** 		CanMessage incoming;
+  81:../../shared/firmware/Src/canteros.c **** 		if (canGetNew(can1Handle, &incoming) == 0 && incoming.dlc > 0 &&
+  82:../../shared/firmware/Src/canteros.c **** 		    isHandled(incoming.id, incoming.data[0])) {
+  83:../../shared/firmware/Src/canteros.c **** 			CanterosMessage* m = &(queue.messages[queue.tail]);
+  84:../../shared/firmware/Src/canteros.c **** 			m->receiver = incoming.id;
+  85:../../shared/firmware/Src/canteros.c **** 			m->header = incoming.data[0];
+  86:../../shared/firmware/Src/canteros.c **** 			m->payloadSize = incoming.dlc - 1;
+  87:../../shared/firmware/Src/canteros.c **** 			for (int i = 0; i < m->payloadSize; ++i)
+  88:../../shared/firmware/Src/canteros.c **** 				m->payload[i] = incoming.data[i + 1];
+  89:../../shared/firmware/Src/canteros.c **** 			++queue.tail;
+  90:../../shared/firmware/Src/canteros.c **** 			queue.tail %= CANTEROS_MESSAGE_QUEUE_SIZE;
+  91:../../shared/firmware/Src/canteros.c **** 			gotNew = true;
+  92:../../shared/firmware/Src/canteros.c **** 		}
+  93:../../shared/firmware/Src/canteros.c **** 	}
+  94:../../shared/firmware/Src/canteros.c **** 	return gotNew;
+  95:../../shared/firmware/Src/canteros.c **** }
+  96:../../shared/firmware/Src/canteros.c **** 
+  97:../../shared/firmware/Src/canteros.c **** HAL_StatusTypeDef canterosSendMessage(const CanterosMessage* toSend)
+  98:../../shared/firmware/Src/canteros.c **** {
+ 215              		.loc 1 98 0
+ 216              		.cfi_startproc
+ 217              		@ args = 0, pretend = 0, frame = 16
+ 218              		@ frame_needed = 0, uses_anonymous_args = 0
+ 219              	.LVL19:
+  99:../../shared/firmware/Src/canteros.c **** 	if (toSend->payloadSize > 7)
+ 220              		.loc 1 99 0
+ 221 0000 C378     		ldrb	r3, [r0, #3]	@ zero_extendqisi2
+ 222 0002 072B     		cmp	r3, #7
+ 223 0004 20D8     		bhi	.L26
+  98:../../shared/firmware/Src/canteros.c **** 	if (toSend->payloadSize > 7)
+ 224              		.loc 1 98 0
+ 225 0006 00B5     		push	{lr}
+ 226              	.LCFI3:
+ 227              		.cfi_def_cfa_offset 4
+ 228              		.cfi_offset 14, -4
+ 229 0008 85B0     		sub	sp, sp, #20
+ 230              	.LCFI4:
+ 231              		.cfi_def_cfa_offset 24
+ 100:../../shared/firmware/Src/canteros.c **** 		return HAL_ERROR;
+ 101:../../shared/firmware/Src/canteros.c **** 
+ 102:../../shared/firmware/Src/canteros.c **** 	CanMessage toSendLow;
+ 103:../../shared/firmware/Src/canteros.c **** 	toSendLow.id = PRIMARY_ADDRESS | (1 << 10);
+ 232              		.loc 1 103 0
+ 233 000a 124A     		ldr	r2, .L29
+ 234 000c 1288     		ldrh	r2, [r2]
+ 235 000e 42F48062 		orr	r2, r2, #1024
+ 236 0012 ADF80420 		strh	r2, [sp, #4]	@ movhi
+ 104:../../shared/firmware/Src/canteros.c **** 	toSendLow.dlc = toSend->payloadSize + 1;
+ 237              		.loc 1 104 0
+ 238 0016 0133     		adds	r3, r3, #1
+ 239 0018 8DF80630 		strb	r3, [sp, #6]
+ARM GAS  /tmp/ccohbHjq.s 			page 7
+
+
+ 105:../../shared/firmware/Src/canteros.c **** 	toSendLow.data[0] = toSend->header;
+ 240              		.loc 1 105 0
+ 241 001c 8378     		ldrb	r3, [r0, #2]	@ zero_extendqisi2
+ 242 001e 8DF80730 		strb	r3, [sp, #7]
+ 243              	.LVL20:
+ 244              	.LBB6:
+ 106:../../shared/firmware/Src/canteros.c **** 	for (int i = 0; i < toSend->payloadSize; ++i)
+ 245              		.loc 1 106 0
+ 246 0022 0023     		movs	r3, #0
+ 247 0024 07E0     		b	.L24
+ 248              	.LVL21:
+ 249              	.L25:
+ 107:../../shared/firmware/Src/canteros.c **** 		toSendLow.data[i + 1] = toSend->payload[i];
+ 250              		.loc 1 107 0 discriminator 3
+ 251 0026 5A1C     		adds	r2, r3, #1
+ 252 0028 0344     		add	r3, r3, r0
+ 253              	.LVL22:
+ 254 002a 1979     		ldrb	r1, [r3, #4]	@ zero_extendqisi2
+ 255 002c 04AB     		add	r3, sp, #16
+ 256 002e 1344     		add	r3, r3, r2
+ 257 0030 03F8091C 		strb	r1, [r3, #-9]
+ 258              	.LVL23:
+ 106:../../shared/firmware/Src/canteros.c **** 	for (int i = 0; i < toSend->payloadSize; ++i)
+ 259              		.loc 1 106 0 discriminator 3
+ 260 0034 1346     		mov	r3, r2
+ 261              	.LVL24:
+ 262              	.L24:
+ 106:../../shared/firmware/Src/canteros.c **** 	for (int i = 0; i < toSend->payloadSize; ++i)
+ 263              		.loc 1 106 0 is_stmt 0 discriminator 1
+ 264 0036 C278     		ldrb	r2, [r0, #3]	@ zero_extendqisi2
+ 265 0038 9A42     		cmp	r2, r3
+ 266 003a F4DC     		bgt	.L25
+ 267              	.LBE6:
+ 108:../../shared/firmware/Src/canteros.c **** 
+ 109:../../shared/firmware/Src/canteros.c **** 	return canSendMessage(can1Handle, &toSendLow);
+ 268              		.loc 1 109 0 is_stmt 1
+ 269 003c 064B     		ldr	r3, .L29+4
+ 270              	.LVL25:
+ 271 003e 1868     		ldr	r0, [r3]
+ 272              	.LVL26:
+ 273 0040 01A9     		add	r1, sp, #4
+ 274 0042 FFF7FEFF 		bl	canSendMessage
+ 275              	.LVL27:
+ 276 0046 01E0     		b	.L23
+ 277              	.LVL28:
+ 278              	.L26:
+ 279              	.LCFI5:
+ 280              		.cfi_def_cfa_offset 0
+ 281              		.cfi_restore 14
+ 100:../../shared/firmware/Src/canteros.c **** 
+ 282              		.loc 1 100 0
+ 283 0048 0120     		movs	r0, #1
+ 284              	.LVL29:
+ 285 004a 7047     		bx	lr
+ 286              	.L23:
+ 287              	.LCFI6:
+ 288              		.cfi_def_cfa_offset 24
+ARM GAS  /tmp/ccohbHjq.s 			page 8
+
+
+ 289              		.cfi_offset 14, -4
+ 110:../../shared/firmware/Src/canteros.c **** }
+ 290              		.loc 1 110 0
+ 291 004c 05B0     		add	sp, sp, #20
+ 292              	.LCFI7:
+ 293              		.cfi_def_cfa_offset 4
+ 294              		@ sp needed
+ 295 004e 5DF804FB 		ldr	pc, [sp], #4
+ 296              	.L30:
+ 297 0052 00BF     		.align	2
+ 298              	.L29:
+ 299 0054 00000000 		.word	.LANCHOR4
+ 300 0058 00000000 		.word	can1Handle
+ 301              		.cfi_endproc
+ 302              	.LFE67:
+ 304              		.section	.text.canterosProcess,"ax",%progbits
+ 305              		.align	2
+ 306              		.global	canterosProcess
+ 307              		.thumb
+ 308              		.thumb_func
+ 310              	canterosProcess:
+ 311              	.LFB66:
+  54:../../shared/firmware/Src/canteros.c **** 	static uint32_t lastNodeStatusMs = 0;
+ 312              		.loc 1 54 0
+ 313              		.cfi_startproc
+ 314              		@ args = 0, pretend = 0, frame = 16
+ 315              		@ frame_needed = 0, uses_anonymous_args = 0
+ 316 0000 F0B5     		push	{r4, r5, r6, r7, lr}
+ 317              	.LCFI8:
+ 318              		.cfi_def_cfa_offset 20
+ 319              		.cfi_offset 4, -20
+ 320              		.cfi_offset 5, -16
+ 321              		.cfi_offset 6, -12
+ 322              		.cfi_offset 7, -8
+ 323              		.cfi_offset 14, -4
+ 324 0002 85B0     		sub	sp, sp, #20
+ 325              	.LCFI9:
+ 326              		.cfi_def_cfa_offset 40
+  56:../../shared/firmware/Src/canteros.c **** 	if (nowMs - lastNodeStatusMs > 1000) {
+ 327              		.loc 1 56 0
+ 328 0004 FFF7FEFF 		bl	HAL_GetTick
+ 329              	.LVL30:
+  57:../../shared/firmware/Src/canteros.c **** 		lastNodeStatusMs = nowMs;
+ 330              		.loc 1 57 0
+ 331 0008 3C4B     		ldr	r3, .L40
+ 332 000a 1B68     		ldr	r3, [r3]
+ 333 000c C31A     		subs	r3, r0, r3
+ 334 000e B3F57A7F 		cmp	r3, #1000
+ 335 0012 32D9     		bls	.L32
+ 336              	.LBB7:
+  58:../../shared/firmware/Src/canteros.c **** 		sendingNodeStatus.uptimeSeconds = nowMs / 1000;
+ 337              		.loc 1 58 0
+ 338 0014 394B     		ldr	r3, .L40
+ 339 0016 1860     		str	r0, [r3]
+  59:../../shared/firmware/Src/canteros.c **** 
+ 340              		.loc 1 59 0
+ 341 0018 394B     		ldr	r3, .L40+4
+ARM GAS  /tmp/ccohbHjq.s 			page 9
+
+
+ 342 001a A3FB0030 		umull	r3, r0, r3, r0
+ 343              	.LVL31:
+ 344 001e 8009     		lsrs	r0, r0, #6
+ 345 0020 384B     		ldr	r3, .L40+8
+ 346 0022 1860     		str	r0, [r3]
+  62:../../shared/firmware/Src/canteros.c **** 		toSend.payloadSize = 7;
+ 347              		.loc 1 62 0
+ 348 0024 0E22     		movs	r2, #14
+ 349 0026 8DF80620 		strb	r2, [sp, #6]
+  63:../../shared/firmware/Src/canteros.c **** 		toSend.payload[0] = PRIMARY_ADDRESS >> 3;
+ 350              		.loc 1 63 0
+ 351 002a 0722     		movs	r2, #7
+ 352 002c 8DF80720 		strb	r2, [sp, #7]
+  64:../../shared/firmware/Src/canteros.c **** 		toSend.payload[1] = PRIMARY_ADDRESS << 5;
+ 353              		.loc 1 64 0
+ 354 0030 354A     		ldr	r2, .L40+12
+ 355 0032 1288     		ldrh	r2, [r2]
+ 356 0034 D108     		lsrs	r1, r2, #3
+ 357 0036 8DF80810 		strb	r1, [sp, #8]
+  65:../../shared/firmware/Src/canteros.c **** 		toSend.payload[2] = (sendingNodeStatus.uptimeSeconds & 0x00ff0000) >> 16;
+ 358              		.loc 1 65 0
+ 359 003a 5201     		lsls	r2, r2, #5
+ 360 003c 8DF80920 		strb	r2, [sp, #9]
+  66:../../shared/firmware/Src/canteros.c **** 		toSend.payload[3] = (sendingNodeStatus.uptimeSeconds & 0x0000ff00) >> 8;
+ 361              		.loc 1 66 0
+ 362 0040 020C     		lsrs	r2, r0, #16
+ 363 0042 8DF80A20 		strb	r2, [sp, #10]
+  67:../../shared/firmware/Src/canteros.c **** 		toSend.payload[4] = (sendingNodeStatus.uptimeSeconds & 0x000000ff) >> 0;
+ 364              		.loc 1 67 0
+ 365 0046 C0F30722 		ubfx	r2, r0, #8, #8
+ 366 004a 8DF80B20 		strb	r2, [sp, #11]
+  68:../../shared/firmware/Src/canteros.c **** 		toSend.payload[5] = (sendingNodeStatus.health << 6) | (sendingNodeStatus.mode << 3) | (sendingNod
+ 367              		.loc 1 68 0
+ 368 004e 8DF80C00 		strb	r0, [sp, #12]
+  69:../../shared/firmware/Src/canteros.c **** 		toSend.payload[6] = sendingNodeStatus.deviceSpecificCode;
+ 369              		.loc 1 69 0
+ 370 0052 1A79     		ldrb	r2, [r3, #4]	@ zero_extendqisi2
+ 371 0054 5979     		ldrb	r1, [r3, #5]	@ zero_extendqisi2
+ 372 0056 C900     		lsls	r1, r1, #3
+ 373 0058 9879     		ldrb	r0, [r3, #6]	@ zero_extendqisi2
+ 374 005a 41EA8212 		orr	r2, r1, r2, lsl #6
+ 375 005e 0243     		orrs	r2, r2, r0
+ 376 0060 8DF80D20 		strb	r2, [sp, #13]
+  70:../../shared/firmware/Src/canteros.c **** 		HAL_StatusTypeDef res = canterosSendMessage(&toSend);
+ 377              		.loc 1 70 0
+ 378 0064 DB79     		ldrb	r3, [r3, #7]	@ zero_extendqisi2
+ 379 0066 8DF80E30 		strb	r3, [sp, #14]
+  71:../../shared/firmware/Src/canteros.c **** 		if (res) {
+ 380              		.loc 1 71 0
+ 381 006a 01A8     		add	r0, sp, #4
+ 382 006c FFF7FEFF 		bl	canterosSendMessage
+ 383              	.LVL32:
+  72:../../shared/firmware/Src/canteros.c **** 			//Error in sending status
+ 384              		.loc 1 72 0
+ 385 0070 18B1     		cbz	r0, .L32
+  74:../../shared/firmware/Src/canteros.c **** 		}
+ 386              		.loc 1 74 0
+ARM GAS  /tmp/ccohbHjq.s 			page 10
+
+
+ 387 0072 0220     		movs	r0, #2
+ 388              	.LVL33:
+ 389 0074 0121     		movs	r1, #1
+ 390 0076 FFF7FEFF 		bl	led
+ 391              	.LVL34:
+ 392              	.L32:
+ 393              	.LBE7:
+ 394              	.LBB8:
+ 395              	.LBB9:
+  91:../../shared/firmware/Src/canteros.c **** 		}
+ 396              		.loc 1 91 0
+ 397 007a 0026     		movs	r6, #0
+ 398 007c 34E0     		b	.L34
+ 399              	.LVL35:
+ 400              	.L38:
+ 401              	.LBE9:
+  81:../../shared/firmware/Src/canteros.c **** 		    isHandled(incoming.id, incoming.data[0])) {
+ 402              		.loc 1 81 0
+ 403 007e 234B     		ldr	r3, .L40+16
+ 404 0080 1868     		ldr	r0, [r3]
+ 405 0082 01A9     		add	r1, sp, #4
+ 406 0084 FFF7FEFF 		bl	canGetNew
+ 407              	.LVL36:
+ 408 0088 70BB     		cbnz	r0, .L34
+  81:../../shared/firmware/Src/canteros.c **** 		    isHandled(incoming.id, incoming.data[0])) {
+ 409              		.loc 1 81 0 is_stmt 0 discriminator 1
+ 410 008a 9DF80640 		ldrb	r4, [sp, #6]	@ zero_extendqisi2
+ 411 008e 5CB3     		cbz	r4, .L34
+  82:../../shared/firmware/Src/canteros.c **** 			CanterosMessage* m = &(queue.messages[queue.tail]);
+ 412              		.loc 1 82 0 is_stmt 1 discriminator 2
+ 413 0090 BDF80470 		ldrh	r7, [sp, #4]
+ 414 0094 9DF80750 		ldrb	r5, [sp, #7]	@ zero_extendqisi2
+ 415 0098 3846     		mov	r0, r7
+ 416 009a 2946     		mov	r1, r5
+ 417 009c FFF7FEFF 		bl	isHandled
+ 418              	.LVL37:
+  81:../../shared/firmware/Src/canteros.c **** 		    isHandled(incoming.id, incoming.data[0])) {
+ 419              		.loc 1 81 0 discriminator 2
+ 420 00a0 10B3     		cbz	r0, .L34
+ 421              	.LBB11:
+  83:../../shared/firmware/Src/canteros.c **** 			m->receiver = incoming.id;
+ 422              		.loc 1 83 0
+ 423 00a2 1B4B     		ldr	r3, .L40+20
+ 424 00a4 5E78     		ldrb	r6, [r3, #1]	@ zero_extendqisi2
+ 425              	.LVL38:
+ 426 00a6 3146     		mov	r1, r6
+ 427              	.LVL39:
+  84:../../shared/firmware/Src/canteros.c **** 			m->header = incoming.data[0];
+ 428              		.loc 1 84 0
+ 429 00a8 06EB8602 		add	r2, r6, r6, lsl #2
+ 430 00ac 03EB4203 		add	r3, r3, r2, lsl #1
+ 431 00b0 5F80     		strh	r7, [r3, #2]	@ movhi
+  85:../../shared/firmware/Src/canteros.c **** 			m->payloadSize = incoming.dlc - 1;
+ 432              		.loc 1 85 0
+ 433 00b2 1D71     		strb	r5, [r3, #4]
+  86:../../shared/firmware/Src/canteros.c **** 			for (int i = 0; i < m->payloadSize; ++i)
+ 434              		.loc 1 86 0
+ARM GAS  /tmp/ccohbHjq.s 			page 11
+
+
+ 435 00b4 013C     		subs	r4, r4, #1
+ 436 00b6 E4B2     		uxtb	r4, r4
+ 437 00b8 5C71     		strb	r4, [r3, #5]
+ 438              	.LVL40:
+ 439              	.LBB10:
+  87:../../shared/firmware/Src/canteros.c **** 				m->payload[i] = incoming.data[i + 1];
+ 440              		.loc 1 87 0
+ 441 00ba 0023     		movs	r3, #0
+ 442 00bc 0CE0     		b	.L36
+ 443              	.LVL41:
+ 444              	.L37:
+  88:../../shared/firmware/Src/canteros.c **** 			++queue.tail;
+ 445              		.loc 1 88 0 discriminator 3
+ 446 00be 5A1C     		adds	r2, r3, #1
+ 447 00c0 04A8     		add	r0, sp, #16
+ 448 00c2 1044     		add	r0, r0, r2
+ 449 00c4 10F8090C 		ldrb	r0, [r0, #-9]	@ zero_extendqisi2
+ 450 00c8 01EB8105 		add	r5, r1, r1, lsl #2
+ 451 00cc 03EB4503 		add	r3, r3, r5, lsl #1
+ 452              	.LVL42:
+ 453 00d0 0F4D     		ldr	r5, .L40+20
+ 454 00d2 2B44     		add	r3, r3, r5
+ 455 00d4 9871     		strb	r0, [r3, #6]
+ 456              	.LVL43:
+  87:../../shared/firmware/Src/canteros.c **** 				m->payload[i] = incoming.data[i + 1];
+ 457              		.loc 1 87 0 discriminator 3
+ 458 00d6 1346     		mov	r3, r2
+ 459              	.LVL44:
+ 460              	.L36:
+  87:../../shared/firmware/Src/canteros.c **** 				m->payload[i] = incoming.data[i + 1];
+ 461              		.loc 1 87 0 is_stmt 0 discriminator 1
+ 462 00d8 9C42     		cmp	r4, r3
+ 463 00da F0DC     		bgt	.L37
+ 464              	.LBE10:
+  89:../../shared/firmware/Src/canteros.c **** 			queue.tail %= CANTEROS_MESSAGE_QUEUE_SIZE;
+ 465              		.loc 1 89 0 is_stmt 1
+ 466 00dc 0136     		adds	r6, r6, #1
+  90:../../shared/firmware/Src/canteros.c **** 			gotNew = true;
+ 467              		.loc 1 90 0
+ 468 00de 06F00F06 		and	r6, r6, #15
+ 469 00e2 0B4B     		ldr	r3, .L40+20
+ 470              	.LVL45:
+ 471 00e4 5E70     		strb	r6, [r3, #1]
+ 472              	.LVL46:
+  91:../../shared/firmware/Src/canteros.c **** 		}
+ 473              		.loc 1 91 0
+ 474 00e6 0126     		movs	r6, #1
+ 475              	.LVL47:
+ 476              	.L34:
+ 477              	.LBE11:
+ 478              	.LBE8:
+  79:../../shared/firmware/Src/canteros.c **** 		CanMessage incoming;
+ 479              		.loc 1 79 0
+ 480 00e8 084B     		ldr	r3, .L40+16
+ 481 00ea 1868     		ldr	r0, [r3]
+ 482 00ec FFF7FEFF 		bl	canCheckInbox
+ 483              	.LVL48:
+ARM GAS  /tmp/ccohbHjq.s 			page 12
+
+
+ 484 00f0 0028     		cmp	r0, #0
+ 485 00f2 C4D1     		bne	.L38
+  95:../../shared/firmware/Src/canteros.c **** 
+ 486              		.loc 1 95 0
+ 487 00f4 3046     		mov	r0, r6
+ 488 00f6 05B0     		add	sp, sp, #20
+ 489              	.LCFI10:
+ 490              		.cfi_def_cfa_offset 20
+ 491              		@ sp needed
+ 492 00f8 F0BD     		pop	{r4, r5, r6, r7, pc}
+ 493              	.LVL49:
+ 494              	.L41:
+ 495 00fa 00BF     		.align	2
+ 496              	.L40:
+ 497 00fc 00000000 		.word	.LANCHOR6
+ 498 0100 D34D6210 		.word	274877907
+ 499 0104 00000000 		.word	sendingNodeStatus
+ 500 0108 00000000 		.word	.LANCHOR4
+ 501 010c 00000000 		.word	can1Handle
+ 502 0110 00000000 		.word	.LANCHOR5
+ 503              		.cfi_endproc
+ 504              	.LFE66:
+ 506              		.section	.text.canterosCheckInbox,"ax",%progbits
+ 507              		.align	2
+ 508              		.global	canterosCheckInbox
+ 509              		.thumb
+ 510              		.thumb_func
+ 512              	canterosCheckInbox:
+ 513              	.LFB68:
+ 111:../../shared/firmware/Src/canteros.c **** 
+ 112:../../shared/firmware/Src/canteros.c **** int canterosCheckInbox()
+ 113:../../shared/firmware/Src/canteros.c **** {
+ 514              		.loc 1 113 0
+ 515              		.cfi_startproc
+ 516              		@ args = 0, pretend = 0, frame = 0
+ 517              		@ frame_needed = 0, uses_anonymous_args = 0
+ 518              		@ link register save eliminated.
+ 114:../../shared/firmware/Src/canteros.c **** 	return (CANTEROS_MESSAGE_QUEUE_SIZE + queue.tail - queue.head) % CANTEROS_MESSAGE_QUEUE_SIZE;
+ 519              		.loc 1 114 0
+ 520 0000 064B     		ldr	r3, .L44
+ 521 0002 5878     		ldrb	r0, [r3, #1]	@ zero_extendqisi2
+ 522 0004 1030     		adds	r0, r0, #16
+ 523 0006 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 524 0008 C01A     		subs	r0, r0, r3
+ 525 000a 054B     		ldr	r3, .L44+4
+ 526 000c 1840     		ands	r0, r0, r3
+ 527 000e 03D5     		bpl	.L43
+ 528 0010 0138     		subs	r0, r0, #1
+ 529 0012 60F00F00 		orn	r0, r0, #15
+ 530 0016 0130     		adds	r0, r0, #1
+ 531              	.L43:
+ 115:../../shared/firmware/Src/canteros.c **** }
+ 532              		.loc 1 115 0
+ 533 0018 7047     		bx	lr
+ 534              	.L45:
+ 535 001a 00BF     		.align	2
+ 536              	.L44:
+ARM GAS  /tmp/ccohbHjq.s 			page 13
+
+
+ 537 001c 00000000 		.word	.LANCHOR5
+ 538 0020 0F000080 		.word	-2147483633
+ 539              		.cfi_endproc
+ 540              	.LFE68:
+ 542              		.section	.text.canterosGetNew,"ax",%progbits
+ 543              		.align	2
+ 544              		.global	canterosGetNew
+ 545              		.thumb
+ 546              		.thumb_func
+ 548              	canterosGetNew:
+ 549              	.LFB69:
+ 116:../../shared/firmware/Src/canteros.c **** 
+ 117:../../shared/firmware/Src/canteros.c **** int canterosGetNew(CanterosMessage* toStore)
+ 118:../../shared/firmware/Src/canteros.c **** {
+ 550              		.loc 1 118 0
+ 551              		.cfi_startproc
+ 552              		@ args = 0, pretend = 0, frame = 0
+ 553              		@ frame_needed = 0, uses_anonymous_args = 0
+ 554              	.LVL50:
+ 555 0000 38B5     		push	{r3, r4, r5, lr}
+ 556              	.LCFI11:
+ 557              		.cfi_def_cfa_offset 16
+ 558              		.cfi_offset 3, -16
+ 559              		.cfi_offset 4, -12
+ 560              		.cfi_offset 5, -8
+ 561              		.cfi_offset 14, -4
+ 562 0002 0446     		mov	r4, r0
+ 119:../../shared/firmware/Src/canteros.c **** 	if (canterosCheckInbox() <= 0)
+ 563              		.loc 1 119 0
+ 564 0004 FFF7FEFF 		bl	canterosCheckInbox
+ 565              	.LVL51:
+ 566 0008 0028     		cmp	r0, #0
+ 567 000a 12DD     		ble	.L48
+ 120:../../shared/firmware/Src/canteros.c **** 		return -1;
+ 121:../../shared/firmware/Src/canteros.c **** 
+ 122:../../shared/firmware/Src/canteros.c **** 	*toStore = queue.messages[queue.head];
+ 568              		.loc 1 122 0
+ 569 000c 0A49     		ldr	r1, .L50
+ 570 000e 0B78     		ldrb	r3, [r1]	@ zero_extendqisi2
+ 571 0010 03EB8302 		add	r2, r3, r3, lsl #2
+ 572 0014 01EB4202 		add	r2, r1, r2, lsl #1
+ 573 0018 52F8025F 		ldr	r5, [r2, #2]!	@ unaligned
+ 574 001c 5068     		ldr	r0, [r2, #4]	@ unaligned
+ 575 001e 2560     		str	r5, [r4]	@ unaligned
+ 576 0020 6060     		str	r0, [r4, #4]	@ unaligned
+ 577 0022 1289     		ldrh	r2, [r2, #8]	@ unaligned
+ 578 0024 2281     		strh	r2, [r4, #8]	@ unaligned
+ 123:../../shared/firmware/Src/canteros.c **** 
+ 124:../../shared/firmware/Src/canteros.c **** 	++queue.head;
+ 579              		.loc 1 124 0
+ 580 0026 0133     		adds	r3, r3, #1
+ 125:../../shared/firmware/Src/canteros.c **** 	queue.head %= CANTEROS_MESSAGE_QUEUE_SIZE;
+ 581              		.loc 1 125 0
+ 582 0028 03F00F03 		and	r3, r3, #15
+ 583 002c 0B70     		strb	r3, [r1]
+ 126:../../shared/firmware/Src/canteros.c **** 
+ 127:../../shared/firmware/Src/canteros.c **** 	return 0;
+ARM GAS  /tmp/ccohbHjq.s 			page 14
+
+
+ 584              		.loc 1 127 0
+ 585 002e 0020     		movs	r0, #0
+ 586 0030 38BD     		pop	{r3, r4, r5, pc}
+ 587              	.LVL52:
+ 588              	.L48:
+ 120:../../shared/firmware/Src/canteros.c **** 
+ 589              		.loc 1 120 0
+ 590 0032 4FF0FF30 		mov	r0, #-1
+ 128:../../shared/firmware/Src/canteros.c **** }
+ 591              		.loc 1 128 0
+ 592 0036 38BD     		pop	{r3, r4, r5, pc}
+ 593              	.LVL53:
+ 594              	.L51:
+ 595              		.align	2
+ 596              	.L50:
+ 597 0038 00000000 		.word	.LANCHOR5
+ 598              		.cfi_endproc
+ 599              	.LFE69:
+ 601              		.comm	sendingNodeStatus,8,4
+ 602              		.section	.bss.lastNodeStatusMs.7425,"aw",%nobits
+ 603              		.align	2
+ 604              		.set	.LANCHOR6,. + 0
+ 607              	lastNodeStatusMs.7425:
+ 608 0000 00000000 		.space	4
+ 609              		.section	.bss.PRIMARY_ADDRESS,"aw",%nobits
+ 610              		.align	1
+ 611              		.set	.LANCHOR4,. + 0
+ 614              	PRIMARY_ADDRESS:
+ 615 0000 0000     		.space	2
+ 616              		.section	.bss.queue,"aw",%nobits
+ 617              		.align	2
+ 618              		.set	.LANCHOR5,. + 0
+ 621              	queue:
+ 622 0000 00000000 		.space	162
+ 622      00000000 
+ 622      00000000 
+ 622      00000000 
+ 622      00000000 
+ 623              		.section	.bss.handledHeaders,"aw",%nobits
+ 624              		.align	2
+ 625              		.set	.LANCHOR2,. + 0
+ 628              	handledHeaders:
+ 629 0000 00000000 		.space	4
+ 630              		.section	.bss.myAddresses,"aw",%nobits
+ 631              		.align	2
+ 632              		.set	.LANCHOR0,. + 0
+ 635              	myAddresses:
+ 636 0000 00000000 		.space	4
+ 637              		.section	.bss.ADDRESSES_SIZE,"aw",%nobits
+ 638              		.set	.LANCHOR1,. + 0
+ 641              	ADDRESSES_SIZE:
+ 642 0000 00       		.space	1
+ 643              		.section	.bss.HEADERS_SIZE,"aw",%nobits
+ 644              		.set	.LANCHOR3,. + 0
+ 647              	HEADERS_SIZE:
+ 648 0000 00       		.space	1
+ 649              		.text
+ARM GAS  /tmp/ccohbHjq.s 			page 15
+
+
+ 650              	.Letext0:
+ 651              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 652              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 653              		.file 4 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 654              		.file 5 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 655              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_can.h"
+ 656              		.file 7 "../../shared/firmware/Inc/can.h"
+ 657              		.file 8 "../../shared/firmware/Inc/canterosDefs.h"
+ 658              		.file 9 "../../shared/firmware/Inc/canteros.h"
+ 659              		.file 10 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 660              		.file 11 "../../shared/firmware/Inc/globals.h"
+ 661              		.file 12 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ARM GAS  /tmp/ccohbHjq.s 			page 16
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 canteros.c
+     /tmp/ccohbHjq.s:19     .text.isHandled:0000000000000000 $t
+     /tmp/ccohbHjq.s:23     .text.isHandled:0000000000000000 isHandled
+     /tmp/ccohbHjq.s:117    .text.isHandled:0000000000000048 $d
+     /tmp/ccohbHjq.s:125    .text.configCanteros:0000000000000000 $t
+     /tmp/ccohbHjq.s:130    .text.configCanteros:0000000000000000 configCanteros
+     /tmp/ccohbHjq.s:171    .text.configCanteros:0000000000000024 $d
+     /tmp/ccohbHjq.s:180    .text.canterosInit:0000000000000000 $t
+     /tmp/ccohbHjq.s:185    .text.canterosInit:0000000000000000 canterosInit
+     /tmp/ccohbHjq.s:203    .text.canterosInit:000000000000000c $d
+     /tmp/ccohbHjq.s:208    .text.canterosSendMessage:0000000000000000 $t
+     /tmp/ccohbHjq.s:213    .text.canterosSendMessage:0000000000000000 canterosSendMessage
+     /tmp/ccohbHjq.s:299    .text.canterosSendMessage:0000000000000054 $d
+     /tmp/ccohbHjq.s:305    .text.canterosProcess:0000000000000000 $t
+     /tmp/ccohbHjq.s:310    .text.canterosProcess:0000000000000000 canterosProcess
+     /tmp/ccohbHjq.s:497    .text.canterosProcess:00000000000000fc $d
+                            *COM*:0000000000000008 sendingNodeStatus
+     /tmp/ccohbHjq.s:507    .text.canterosCheckInbox:0000000000000000 $t
+     /tmp/ccohbHjq.s:512    .text.canterosCheckInbox:0000000000000000 canterosCheckInbox
+     /tmp/ccohbHjq.s:537    .text.canterosCheckInbox:000000000000001c $d
+     /tmp/ccohbHjq.s:543    .text.canterosGetNew:0000000000000000 $t
+     /tmp/ccohbHjq.s:548    .text.canterosGetNew:0000000000000000 canterosGetNew
+     /tmp/ccohbHjq.s:597    .text.canterosGetNew:0000000000000038 $d
+     /tmp/ccohbHjq.s:603    .bss.lastNodeStatusMs.7425:0000000000000000 $d
+     /tmp/ccohbHjq.s:607    .bss.lastNodeStatusMs.7425:0000000000000000 lastNodeStatusMs.7425
+     /tmp/ccohbHjq.s:610    .bss.PRIMARY_ADDRESS:0000000000000000 $d
+     /tmp/ccohbHjq.s:614    .bss.PRIMARY_ADDRESS:0000000000000000 PRIMARY_ADDRESS
+     /tmp/ccohbHjq.s:617    .bss.queue:0000000000000000 $d
+     /tmp/ccohbHjq.s:621    .bss.queue:0000000000000000 queue
+     /tmp/ccohbHjq.s:624    .bss.handledHeaders:0000000000000000 $d
+     /tmp/ccohbHjq.s:628    .bss.handledHeaders:0000000000000000 handledHeaders
+     /tmp/ccohbHjq.s:631    .bss.myAddresses:0000000000000000 $d
+     /tmp/ccohbHjq.s:635    .bss.myAddresses:0000000000000000 myAddresses
+     /tmp/ccohbHjq.s:641    .bss.ADDRESSES_SIZE:0000000000000000 ADDRESSES_SIZE
+     /tmp/ccohbHjq.s:642    .bss.ADDRESSES_SIZE:0000000000000000 $d
+     /tmp/ccohbHjq.s:647    .bss.HEADERS_SIZE:0000000000000000 HEADERS_SIZE
+     /tmp/ccohbHjq.s:648    .bss.HEADERS_SIZE:0000000000000000 $d
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+configCanAddresses
+canSendMessage
+can1Handle
+HAL_GetTick
+led
+canGetNew
+canCheckInbox

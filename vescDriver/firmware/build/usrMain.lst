@@ -1,0 +1,1083 @@
+ARM GAS  /tmp/cccOUwYK.s 			page 1
+
+
+   1              		.syntax unified
+   2              		.cpu cortex-m3
+   3              		.fpu softvfp
+   4              		.eabi_attribute 20, 1
+   5              		.eabi_attribute 21, 1
+   6              		.eabi_attribute 23, 3
+   7              		.eabi_attribute 24, 1
+   8              		.eabi_attribute 25, 1
+   9              		.eabi_attribute 26, 1
+  10              		.eabi_attribute 30, 1
+  11              		.eabi_attribute 34, 1
+  12              		.eabi_attribute 18, 4
+  13              		.thumb
+  14              		.file	"usrMain.c"
+  15              		.text
+  16              	.Ltext0:
+  17              		.cfi_sections	.debug_frame
+  18              		.global	__aeabi_i2f
+  19              		.global	__aeabi_ui2f
+  20              		.global	__aeabi_f2iz
+  21              		.section	.text.usrMain,"ax",%progbits
+  22              		.align	2
+  23              		.global	usrMain
+  24              		.thumb
+  25              		.thumb_func
+  27              	usrMain:
+  28              	.LFB64:
+  29              		.file 1 "Src/usrMain.c"
+   1:Src/usrMain.c **** #include "usrMain.h"
+   2:Src/usrMain.c **** 
+   3:Src/usrMain.c **** #include "can.h"
+   4:Src/usrMain.c **** #include "canteros.h"
+   5:Src/usrMain.c **** #include "globals.h"
+   6:Src/usrMain.c **** #include "pid.h"
+   7:Src/usrMain.c **** #include "vesc.h"
+   8:Src/usrMain.c **** 
+   9:Src/usrMain.c **** #define PRIMARY_ADDRESS 200
+  10:Src/usrMain.c **** #define ADDRESSES_SIZE 1
+  11:Src/usrMain.c **** static const uint16_t myAddresses[ADDRESSES_SIZE] = {
+  12:Src/usrMain.c **** 	//128, //all drive wheels
+  13:Src/usrMain.c **** 	//129, //left drive wheels
+  14:Src/usrMain.c **** 	PRIMARY_ADDRESS
+  15:Src/usrMain.c **** };
+  16:Src/usrMain.c **** #define HEADERS_SIZE 8
+  17:Src/usrMain.c **** static const uint8_t handledHeaders[HEADERS_SIZE] = {
+  18:Src/usrMain.c **** 	7, 17, 8, 18, 38, 9, 19, //power, position, speed
+  19:Src/usrMain.c **** 	20 //request current
+  20:Src/usrMain.c **** };
+  21:Src/usrMain.c **** 
+  22:Src/usrMain.c **** #if PRIMARY_ADDRESS > 180
+  23:Src/usrMain.c ****  #define ENCODER true
+  24:Src/usrMain.c **** #else
+  25:Src/usrMain.c ****  #define ENCODER true
+  26:Src/usrMain.c **** #endif
+  27:Src/usrMain.c **** 
+  28:Src/usrMain.c **** const uint32_t MOTOR_TIMEOUT_MS = 500, RESET_TIMEOUT_MS = UINT32_MAX;
+  29:Src/usrMain.c **** 
+ARM GAS  /tmp/cccOUwYK.s 			page 2
+
+
+  30:Src/usrMain.c **** typedef enum {
+  31:Src/usrMain.c **** 	OFF, POWER, POSITION
+  32:Src/usrMain.c **** } Mode;
+  33:Src/usrMain.c **** 
+  34:Src/usrMain.c **** #define ENC_CNT_SCALE 39999
+  35:Src/usrMain.c **** volatile static uint16_t ENC_CNT;
+  36:Src/usrMain.c **** volatile static uint16_t indexPulsePosition = 0xffff;
+  37:Src/usrMain.c **** static Mode modeNow = OFF;
+  38:Src/usrMain.c **** 
+  39:Src/usrMain.c **** #if PRIMARY_ADDRESS == 200 //base
+  40:Src/usrMain.c ****  #define POSITION_KP 0.5f
+  41:Src/usrMain.c ****  #define POSITION_KI 0.0f
+  42:Src/usrMain.c ****  #define POSITION_KD 5.0f
+  43:Src/usrMain.c ****  #define PID_REVERSED true
+  44:Src/usrMain.c **** #elif PRIMARY_ADDRESS == 201 //gripper_latitude
+  45:Src/usrMain.c ****  #define POSITION_KP 1.0f
+  46:Src/usrMain.c ****  #define POSITION_KI 0.0f
+  47:Src/usrMain.c ****  #define POSITION_KD 1.0f
+  48:Src/usrMain.c ****  #define PID_REVERSED false
+  49:Src/usrMain.c **** #else
+  50:Src/usrMain.c ****  #define POSITION_KP 0.0f
+  51:Src/usrMain.c ****  #define POSITION_KI 0.0f
+  52:Src/usrMain.c ****  #define POSITION_KD 0.0f
+  53:Src/usrMain.c ****  #define PID_REVERSED false
+  54:Src/usrMain.c **** #endif
+  55:Src/usrMain.c **** static PidData positionPid;
+  56:Src/usrMain.c **** 
+  57:Src/usrMain.c **** static uint16_t positionInfoPeriodMs = 0;
+  58:Src/usrMain.c **** 
+  59:Src/usrMain.c **** uint16_t driverInfoPeriodMs = 0;
+  60:Src/usrMain.c **** 
+  61:Src/usrMain.c **** static inline void handleMessage(const CanterosMessage* m)
+  62:Src/usrMain.c **** {
+  63:Src/usrMain.c **** 	//-----Power-----
+  64:Src/usrMain.c **** 	if (m->header == 7) { //set power
+  65:Src/usrMain.c **** 		modeNow = POWER;
+  66:Src/usrMain.c **** 		pidStop(&positionPid);
+  67:Src/usrMain.c **** 		int16_t power = ((int16_t)m->payload[0] << 8) | m->payload[1];
+  68:Src/usrMain.c **** 		vescSetPwm((int32_t)power * 1000 / -INT16_MIN);
+  69:Src/usrMain.c **** 		led(1, power == 0 ? 0 : 1);
+  70:Src/usrMain.c **** 	//-----Position-----
+  71:Src/usrMain.c **** 	} else if (ENCODER && m->header == 8) { //set position
+  72:Src/usrMain.c **** 		uint16_t position = (m->payload[0] << 8) | m->payload[1];
+  73:Src/usrMain.c **** 		position = CLAMP_VALUE(position, 100, 3500);
+  74:Src/usrMain.c **** 
+  75:Src/usrMain.c **** 		positionPid.setpoint = ((int32_t)position * ENC_CNT_SCALE / 3600);
+  76:Src/usrMain.c **** 
+  77:Src/usrMain.c **** 		modeNow = POSITION;
+  78:Src/usrMain.c **** 		if (!positionPid.on) {
+  79:Src/usrMain.c **** 			positionPid.output = 0;
+  80:Src/usrMain.c **** 			pidStart(&positionPid);
+  81:Src/usrMain.c **** 		}
+  82:Src/usrMain.c **** 	} else if (ENCODER && m->header == 18) { //request position
+  83:Src/usrMain.c **** 		if (m->payload[0] == 0)
+  84:Src/usrMain.c **** 			positionInfoPeriodMs = 0;
+  85:Src/usrMain.c **** 		else
+  86:Src/usrMain.c **** 			positionInfoPeriodMs = 1000 / m->payload[0];
+ARM GAS  /tmp/cccOUwYK.s 			page 3
+
+
+  87:Src/usrMain.c **** 	} else if (ENCODER && m->header == 38) { //config position
+  88:Src/usrMain.c **** 		uint16_t position = (m->payload[0] << 8) | m->payload[1];
+  89:Src/usrMain.c **** 
+  90:Src/usrMain.c **** 		ENC_CNT = ((int32_t)position * ENC_CNT_SCALE / 3600);
+  91:Src/usrMain.c **** 
+  92:Src/usrMain.c **** 		CanMessage toSend;
+  93:Src/usrMain.c **** 		toSend.id = 1;
+  94:Src/usrMain.c **** 		toSend.dlc = 2;
+  95:Src/usrMain.c **** 		*((uint16_t*)toSend.data) = ENC_CNT;
+  96:Src/usrMain.c **** 		if (canSendMessage(can2Handle, &toSend))
+  97:Src/usrMain.c **** 			; //error sending config
+  98:Src/usrMain.c **** 	//-----Driver info-----
+  99:Src/usrMain.c **** 	} else if (m->header == 20) { //request driver info
+ 100:Src/usrMain.c **** 		if (m->payload[0] == 0)
+ 101:Src/usrMain.c **** 			driverInfoPeriodMs = 0;
+ 102:Src/usrMain.c **** 		else
+ 103:Src/usrMain.c **** 			driverInfoPeriodMs = 1000 / m->payload[0];
+ 104:Src/usrMain.c **** 	}
+ 105:Src/usrMain.c **** }
+ 106:Src/usrMain.c **** 
+ 107:Src/usrMain.c **** int usrMain()
+ 108:Src/usrMain.c **** {
+  30              		.loc 1 108 0
+  31              		.cfi_startproc
+  32              		@ args = 0, pretend = 0, frame = 24
+  33              		@ frame_needed = 0, uses_anonymous_args = 0
+  34 0000 2DE9F041 		push	{r4, r5, r6, r7, r8, lr}
+  35              	.LCFI0:
+  36              		.cfi_def_cfa_offset 24
+  37              		.cfi_offset 4, -24
+  38              		.cfi_offset 5, -20
+  39              		.cfi_offset 6, -16
+  40              		.cfi_offset 7, -12
+  41              		.cfi_offset 8, -8
+  42              		.cfi_offset 14, -4
+  43 0004 88B0     		sub	sp, sp, #32
+  44              	.LCFI1:
+  45              		.cfi_def_cfa_offset 56
+ 109:Src/usrMain.c **** 	memset(&positionPid, 0, sizeof(positionPid));
+  46              		.loc 1 109 0
+  47 0006 8549     		ldr	r1, .L30
+  48 0008 0022     		movs	r2, #0
+  49 000a 4A60     		str	r2, [r1, #4]
+  50 000c 01F10C03 		add	r3, r1, #12
+  51 0010 43F8042B 		str	r2, [r3], #4
+  52 0014 43F8042B 		str	r2, [r3], #4
+  53 0018 43F8042B 		str	r2, [r3], #4
+  54 001c 43F8042B 		str	r2, [r3], #4
+  55 0020 43F8042B 		str	r2, [r3], #4
+  56 0024 43F8042B 		str	r2, [r3], #4
+  57 0028 43F8042B 		str	r2, [r3], #4
+  58 002c 43F8042B 		str	r2, [r3], #4
+  59 0030 43F8042B 		str	r2, [r3], #4
+  60 0034 1A60     		str	r2, [r3]
+ 110:Src/usrMain.c **** 	positionPid.Kp = POSITION_KP;
+  61              		.loc 1 110 0
+  62 0036 4FF07C53 		mov	r3, #1056964608
+ARM GAS  /tmp/cccOUwYK.s 			page 4
+
+
+  63 003a 0B60     		str	r3, [r1]	@ float
+ 111:Src/usrMain.c **** 	positionPid.Ki = POSITION_KI;
+ 112:Src/usrMain.c **** 	positionPid.Kd = POSITION_KD;
+  64              		.loc 1 112 0
+  65 003c 784B     		ldr	r3, .L30+4
+  66 003e 8B60     		str	r3, [r1, #8]	@ float
+ 113:Src/usrMain.c **** 	positionPid.outputMax = 500.f; //base
+  67              		.loc 1 113 0
+  68 0040 784B     		ldr	r3, .L30+8
+  69 0042 8B61     		str	r3, [r1, #24]	@ float
+ 114:Src/usrMain.c **** 	positionPid.outputMin = -500.f;
+  70              		.loc 1 114 0
+  71 0044 784B     		ldr	r3, .L30+12
+  72 0046 CB61     		str	r3, [r1, #28]	@ float
+ 115:Src/usrMain.c **** 	positionPid.period = 10;
+  73              		.loc 1 115 0
+  74 0048 0A23     		movs	r3, #10
+  75 004a 8B62     		str	r3, [r1, #40]
+  76              	.LVL0:
+  77              	.LBB15:
+ 116:Src/usrMain.c **** 
+ 117:Src/usrMain.c **** 	for (int i = 1; i <= 3; ++i)
+  78              		.loc 1 117 0
+  79 004c 0124     		movs	r4, #1
+  80 004e 04E0     		b	.L2
+  81              	.LVL1:
+  82              	.L3:
+ 118:Src/usrMain.c **** 		led(i, 0);
+  83              		.loc 1 118 0 discriminator 3
+  84 0050 E0B2     		uxtb	r0, r4
+  85 0052 0021     		movs	r1, #0
+  86 0054 FFF7FEFF 		bl	led
+  87              	.LVL2:
+ 117:Src/usrMain.c **** 		led(i, 0);
+  88              		.loc 1 117 0 discriminator 3
+  89 0058 0134     		adds	r4, r4, #1
+  90              	.LVL3:
+  91              	.L2:
+ 117:Src/usrMain.c **** 		led(i, 0);
+  92              		.loc 1 117 0 is_stmt 0 discriminator 1
+  93 005a 032C     		cmp	r4, #3
+  94 005c F8DD     		ble	.L3
+  95              	.LBE15:
+ 119:Src/usrMain.c **** 	HAL_Delay(100);
+  96              		.loc 1 119 0 is_stmt 1
+  97 005e 6420     		movs	r0, #100
+  98 0060 FFF7FEFF 		bl	HAL_Delay
+  99              	.LVL4:
+ 100              	.LBB16:
+ 120:Src/usrMain.c **** 
+ 121:Src/usrMain.c **** 	for (int i = 1; i <= 3; ++i) {
+ 101              		.loc 1 121 0
+ 102 0064 0124     		movs	r4, #1
+ 103              	.LVL5:
+ 104 0066 07E0     		b	.L4
+ 105              	.LVL6:
+ 106              	.L5:
+ARM GAS  /tmp/cccOUwYK.s 			page 5
+
+
+ 122:Src/usrMain.c **** 		led(i, 1);
+ 107              		.loc 1 122 0 discriminator 3
+ 108 0068 E0B2     		uxtb	r0, r4
+ 109 006a 0121     		movs	r1, #1
+ 110 006c FFF7FEFF 		bl	led
+ 111              	.LVL7:
+ 123:Src/usrMain.c **** 		HAL_Delay(100);
+ 112              		.loc 1 123 0 discriminator 3
+ 113 0070 6420     		movs	r0, #100
+ 114 0072 FFF7FEFF 		bl	HAL_Delay
+ 115              	.LVL8:
+ 121:Src/usrMain.c **** 		led(i, 1);
+ 116              		.loc 1 121 0 discriminator 3
+ 117 0076 0134     		adds	r4, r4, #1
+ 118              	.LVL9:
+ 119              	.L4:
+ 121:Src/usrMain.c **** 		led(i, 1);
+ 120              		.loc 1 121 0 is_stmt 0 discriminator 1
+ 121 0078 032C     		cmp	r4, #3
+ 122 007a F5DD     		ble	.L5
+ 123 007c 0324     		movs	r4, #3
+ 124              	.LVL10:
+ 125 007e 07E0     		b	.L6
+ 126              	.LVL11:
+ 127              	.L7:
+ 128              	.LBE16:
+ 129              	.LBB17:
+ 124:Src/usrMain.c **** 	}
+ 125:Src/usrMain.c **** 	for (int i = 3; i >= 1; --i) {
+ 126:Src/usrMain.c **** 		led(i, 0);
+ 130              		.loc 1 126 0 is_stmt 1 discriminator 3
+ 131 0080 E0B2     		uxtb	r0, r4
+ 132 0082 0021     		movs	r1, #0
+ 133 0084 FFF7FEFF 		bl	led
+ 134              	.LVL12:
+ 127:Src/usrMain.c **** 		HAL_Delay(100);
+ 135              		.loc 1 127 0 discriminator 3
+ 136 0088 6420     		movs	r0, #100
+ 137 008a FFF7FEFF 		bl	HAL_Delay
+ 138              	.LVL13:
+ 125:Src/usrMain.c **** 		led(i, 0);
+ 139              		.loc 1 125 0 discriminator 3
+ 140 008e 013C     		subs	r4, r4, #1
+ 141              	.LVL14:
+ 142              	.L6:
+ 125:Src/usrMain.c **** 		led(i, 0);
+ 143              		.loc 1 125 0 is_stmt 0 discriminator 1
+ 144 0090 002C     		cmp	r4, #0
+ 145 0092 F5DC     		bgt	.L7
+ 146              	.LBE17:
+ 128:Src/usrMain.c **** 	}
+ 129:Src/usrMain.c **** 
+ 130:Src/usrMain.c **** 	configCanteros(PRIMARY_ADDRESS, ADDRESSES_SIZE, myAddresses, HEADERS_SIZE, handledHeaders);
+ 147              		.loc 1 130 0 is_stmt 1
+ 148 0094 654B     		ldr	r3, .L30+16
+ 149 0096 0093     		str	r3, [sp]
+ 150 0098 C820     		movs	r0, #200
+ARM GAS  /tmp/cccOUwYK.s 			page 6
+
+
+ 151 009a 0121     		movs	r1, #1
+ 152 009c 644A     		ldr	r2, .L30+20
+ 153 009e 0823     		movs	r3, #8
+ 154 00a0 FFF7FEFF 		bl	configCanteros
+ 155              	.LVL15:
+ 131:Src/usrMain.c **** 	canInit(CANMODE_CANTEROS, ENCODER ? CANMODE_RAW : CANMODE_OFF);
+ 156              		.loc 1 131 0
+ 157 00a4 0220     		movs	r0, #2
+ 158 00a6 0121     		movs	r1, #1
+ 159 00a8 FFF7FEFF 		bl	canInit
+ 160              	.LVL16:
+ 132:Src/usrMain.c **** 	canterosInit();
+ 161              		.loc 1 132 0
+ 162 00ac FFF7FEFF 		bl	canterosInit
+ 163              	.LVL17:
+ 133:Src/usrMain.c **** 	vescInit();
+ 164              		.loc 1 133 0
+ 165 00b0 FFF7FEFF 		bl	vescInit
+ 166              	.LVL18:
+ 134:Src/usrMain.c **** 	HAL_Delay(100);
+ 167              		.loc 1 134 0
+ 168 00b4 6420     		movs	r0, #100
+ 169 00b6 FFF7FEFF 		bl	HAL_Delay
+ 170              	.LVL19:
+ 135:Src/usrMain.c **** 	sendingNodeStatus.health = HEALTH_OK;
+ 171              		.loc 1 135 0
+ 172 00ba 5E4B     		ldr	r3, .L30+24
+ 173 00bc 0022     		movs	r2, #0
+ 174 00be 1A71     		strb	r2, [r3, #4]
+ 136:Src/usrMain.c **** 	sendingNodeStatus.mode = MODE_OPERATIONAL;
+ 175              		.loc 1 136 0
+ 176 00c0 5A71     		strb	r2, [r3, #5]
+ 137:Src/usrMain.c **** 	sendingNodeStatus.submode = 0;
+ 177              		.loc 1 137 0
+ 178 00c2 9A71     		strb	r2, [r3, #6]
+ 138:Src/usrMain.c **** 	sendingNodeStatus.deviceSpecificCode = 0;
+ 179              		.loc 1 138 0
+ 180 00c4 DA71     		strb	r2, [r3, #7]
+ 139:Src/usrMain.c **** 
+ 140:Src/usrMain.c **** 	uint32_t lastVescReqMs = HAL_GetTick();
+ 181              		.loc 1 140 0
+ 182 00c6 FFF7FEFF 		bl	HAL_GetTick
+ 183              	.LVL20:
+ 184 00ca 0646     		mov	r6, r0
+ 185              	.LVL21:
+ 141:Src/usrMain.c **** 	uint32_t lastReceivedMessageMs = HAL_GetTick();
+ 186              		.loc 1 141 0
+ 187 00cc FFF7FEFF 		bl	HAL_GetTick
+ 188              	.LVL22:
+ 189 00d0 0546     		mov	r5, r0
+ 190              	.LVL23:
+ 142:Src/usrMain.c **** 	uint32_t lastSentInfoMs = HAL_GetTick();
+ 191              		.loc 1 142 0
+ 192 00d2 FFF7FEFF 		bl	HAL_GetTick
+ 193              	.LVL24:
+ 194 00d6 0746     		mov	r7, r0
+ 195              	.LVL25:
+ARM GAS  /tmp/cccOUwYK.s 			page 7
+
+
+ 143:Src/usrMain.c **** 	uint32_t lastSentPosInfoMs = HAL_GetTick();
+ 196              		.loc 1 143 0
+ 197 00d8 FFF7FEFF 		bl	HAL_GetTick
+ 198              	.LVL26:
+ 199 00dc 8046     		mov	r8, r0
+ 200              	.LVL27:
+ 201              	.L8:
+ 202              	.LBB18:
+ 144:Src/usrMain.c **** 	while (1) {
+ 145:Src/usrMain.c **** 		canterosProcess();
+ 203              		.loc 1 145 0
+ 204 00de FFF7FEFF 		bl	canterosProcess
+ 205              	.LVL28:
+ 146:Src/usrMain.c **** 		if (canterosCheckInbox()) {
+ 206              		.loc 1 146 0
+ 207 00e2 FFF7FEFF 		bl	canterosCheckInbox
+ 208              	.LVL29:
+ 209 00e6 0028     		cmp	r0, #0
+ 210 00e8 00F0B880 		beq	.L9
+ 211              	.LBB19:
+ 147:Src/usrMain.c **** 			lastReceivedMessageMs = HAL_GetTick();
+ 212              		.loc 1 147 0
+ 213 00ec FFF7FEFF 		bl	HAL_GetTick
+ 214              	.LVL30:
+ 215 00f0 0546     		mov	r5, r0
+ 216              	.LVL31:
+ 148:Src/usrMain.c **** 			CanterosMessage message;
+ 149:Src/usrMain.c **** 			canterosGetNew(&message);
+ 217              		.loc 1 149 0
+ 218 00f2 02A8     		add	r0, sp, #8
+ 219              	.LVL32:
+ 220 00f4 FFF7FEFF 		bl	canterosGetNew
+ 221              	.LVL33:
+ 222              	.LBB20:
+ 223              	.LBB21:
+  64:Src/usrMain.c **** 		modeNow = POWER;
+ 224              		.loc 1 64 0
+ 225 00f8 9DF80A30 		ldrb	r3, [sp, #10]	@ zero_extendqisi2
+ 226 00fc 072B     		cmp	r3, #7
+ 227 00fe 20D1     		bne	.L10
+ 228              	.LBB22:
+  65:Src/usrMain.c **** 		pidStop(&positionPid);
+ 229              		.loc 1 65 0
+ 230 0100 0122     		movs	r2, #1
+ 231 0102 4D4B     		ldr	r3, .L30+28
+ 232 0104 1A70     		strb	r2, [r3]
+  66:Src/usrMain.c **** 		int16_t power = ((int16_t)m->payload[0] << 8) | m->payload[1];
+ 233              		.loc 1 66 0
+ 234 0106 4548     		ldr	r0, .L30
+ 235 0108 FFF7FEFF 		bl	pidStop
+ 236              	.LVL34:
+  67:Src/usrMain.c **** 		vescSetPwm((int32_t)power * 1000 / -INT16_MIN);
+ 237              		.loc 1 67 0
+ 238 010c 9DF80C40 		ldrb	r4, [sp, #12]	@ zero_extendqisi2
+ 239 0110 9DF80D30 		ldrb	r3, [sp, #13]	@ zero_extendqisi2
+ 240 0114 43EA0424 		orr	r4, r3, r4, lsl #8
+ 241              	.LVL35:
+ARM GAS  /tmp/cccOUwYK.s 			page 8
+
+
+  68:Src/usrMain.c **** 		led(1, power == 0 ? 0 : 1);
+ 242              		.loc 1 68 0
+ 243 0118 20B2     		sxth	r0, r4
+ 244 011a 4FF47A73 		mov	r3, #1000
+ 245 011e 03FB00F0 		mul	r0, r3, r0
+ 246 0122 0028     		cmp	r0, #0
+ 247 0124 02DA     		bge	.L11
+ 248 0126 00F5FF40 		add	r0, r0, #32640
+ 249 012a 7F30     		adds	r0, r0, #127
+ 250              	.L11:
+ 251 012c C013     		asrs	r0, r0, #15
+ 252 012e FFF7FEFF 		bl	vescSetPwm
+ 253              	.LVL36:
+  69:Src/usrMain.c **** 	//-----Position-----
+ 254              		.loc 1 69 0
+ 255 0132 21B2     		sxth	r1, r4
+ 256 0134 0120     		movs	r0, #1
+ 257 0136 0031     		adds	r1, r1, #0
+ 258 0138 18BF     		it	ne
+ 259 013a 0121     		movne	r1, #1
+ 260 013c FFF7FEFF 		bl	led
+ 261              	.LVL37:
+ 262 0140 8CE0     		b	.L9
+ 263              	.LVL38:
+ 264              	.L10:
+ 265              	.LBE22:
+  71:Src/usrMain.c **** 		uint16_t position = (m->payload[0] << 8) | m->payload[1];
+ 266              		.loc 1 71 0
+ 267 0142 082B     		cmp	r3, #8
+ 268 0144 2CD1     		bne	.L13
+ 269              	.LBB23:
+  72:Src/usrMain.c **** 		position = CLAMP_VALUE(position, 100, 3500);
+ 270              		.loc 1 72 0
+ 271 0146 9DF80C20 		ldrb	r2, [sp, #12]	@ zero_extendqisi2
+ 272 014a 9DF80D30 		ldrb	r3, [sp, #13]	@ zero_extendqisi2
+ 273 014e 43EA0223 		orr	r3, r3, r2, lsl #8
+ 274              	.LVL39:
+  73:Src/usrMain.c **** 
+ 275              		.loc 1 73 0
+ 276 0152 40F6AC52 		movw	r2, #3500
+ 277 0156 9342     		cmp	r3, r2
+ 278 0158 04D8     		bhi	.L28
+ 279 015a 642B     		cmp	r3, #100
+ 280 015c 38BF     		it	cc
+ 281 015e 6423     		movcc	r3, #100
+ 282              	.LVL40:
+ 283 0160 1846     		mov	r0, r3
+ 284 0162 01E0     		b	.L14
+ 285              	.LVL41:
+ 286              	.L28:
+ 287 0164 40F6AC50 		movw	r0, #3500
+ 288              	.LVL42:
+ 289              	.L14:
+  75:Src/usrMain.c **** 
+ 290              		.loc 1 75 0
+ 291 0168 49F63F43 		movw	r3, #39999
+ 292 016c 03FB00F3 		mul	r3, r3, r0
+ARM GAS  /tmp/cccOUwYK.s 			page 9
+
+
+ 293 0170 3248     		ldr	r0, .L30+32
+ 294              	.LVL43:
+ 295 0172 80FB0320 		smull	r2, r0, r0, r3
+ 296 0176 1844     		add	r0, r0, r3
+ 297 0178 DB17     		asrs	r3, r3, #31
+ 298 017a 284C     		ldr	r4, .L30
+ 299 017c C3EBE020 		rsb	r0, r3, r0, asr #11
+ 300 0180 FFF7FEFF 		bl	__aeabi_i2f
+ 301              	.LVL44:
+ 302 0184 2061     		str	r0, [r4, #16]	@ float
+  77:Src/usrMain.c **** 		if (!positionPid.on) {
+ 303              		.loc 1 77 0
+ 304 0186 0222     		movs	r2, #2
+ 305 0188 2B4B     		ldr	r3, .L30+28
+ 306 018a 1A70     		strb	r2, [r3]
+  78:Src/usrMain.c **** 			positionPid.output = 0;
+ 307              		.loc 1 78 0
+ 308 018c 94F83030 		ldrb	r3, [r4, #48]	@ zero_extendqisi2
+ 309 0190 002B     		cmp	r3, #0
+ 310 0192 63D1     		bne	.L9
+  79:Src/usrMain.c **** 			pidStart(&positionPid);
+ 311              		.loc 1 79 0
+ 312 0194 2046     		mov	r0, r4
+ 313 0196 0023     		movs	r3, #0
+ 314 0198 6361     		str	r3, [r4, #20]	@ float
+  80:Src/usrMain.c **** 		}
+ 315              		.loc 1 80 0
+ 316 019a FFF7FEFF 		bl	pidStart
+ 317              	.LVL45:
+ 318 019e 5DE0     		b	.L9
+ 319              	.L13:
+ 320              	.LBE23:
+  82:Src/usrMain.c **** 		if (m->payload[0] == 0)
+ 321              		.loc 1 82 0
+ 322 01a0 122B     		cmp	r3, #18
+ 323 01a2 0DD1     		bne	.L15
+  83:Src/usrMain.c **** 			positionInfoPeriodMs = 0;
+ 324              		.loc 1 83 0
+ 325 01a4 9DF80C30 		ldrb	r3, [sp, #12]	@ zero_extendqisi2
+ 326 01a8 1BB9     		cbnz	r3, .L16
+  84:Src/usrMain.c **** 		else
+ 327              		.loc 1 84 0
+ 328 01aa 0022     		movs	r2, #0
+ 329 01ac 244B     		ldr	r3, .L30+36
+ 330 01ae 1A80     		strh	r2, [r3]	@ movhi
+ 331 01b0 54E0     		b	.L9
+ 332              	.L16:
+  86:Src/usrMain.c **** 	} else if (ENCODER && m->header == 38) { //config position
+ 333              		.loc 1 86 0
+ 334 01b2 4FF47A72 		mov	r2, #1000
+ 335 01b6 92FBF3F3 		sdiv	r3, r2, r3
+ 336 01ba 214A     		ldr	r2, .L30+36
+ 337 01bc 1380     		strh	r3, [r2]	@ movhi
+ 338 01be 4DE0     		b	.L9
+ 339              	.L15:
+  87:Src/usrMain.c **** 		uint16_t position = (m->payload[0] << 8) | m->payload[1];
+ 340              		.loc 1 87 0
+ARM GAS  /tmp/cccOUwYK.s 			page 10
+
+
+ 341 01c0 262B     		cmp	r3, #38
+ 342 01c2 22D1     		bne	.L17
+ 343              	.LBB24:
+  88:Src/usrMain.c **** 
+ 344              		.loc 1 88 0
+ 345 01c4 9DF80C20 		ldrb	r2, [sp, #12]	@ zero_extendqisi2
+ 346 01c8 9DF80D30 		ldrb	r3, [sp, #13]	@ zero_extendqisi2
+ 347 01cc 43EA0222 		orr	r2, r3, r2, lsl #8
+ 348              	.LVL46:
+  90:Src/usrMain.c **** 
+ 349              		.loc 1 90 0
+ 350 01d0 49F63F43 		movw	r3, #39999
+ 351 01d4 03FB02F3 		mul	r3, r3, r2
+ 352 01d8 184A     		ldr	r2, .L30+32
+ 353              	.LVL47:
+ 354 01da 82FB0312 		smull	r1, r2, r2, r3
+ 355 01de 1A44     		add	r2, r2, r3
+ 356 01e0 DB17     		asrs	r3, r3, #31
+ 357 01e2 C3EBE223 		rsb	r3, r3, r2, asr #11
+ 358 01e6 9BB2     		uxth	r3, r3
+ 359 01e8 164A     		ldr	r2, .L30+40
+ 360 01ea 1380     		strh	r3, [r2]	@ movhi
+  93:Src/usrMain.c **** 		toSend.dlc = 2;
+ 361              		.loc 1 93 0
+ 362 01ec 0123     		movs	r3, #1
+ 363 01ee ADF81430 		strh	r3, [sp, #20]	@ movhi
+  94:Src/usrMain.c **** 		*((uint16_t*)toSend.data) = ENC_CNT;
+ 364              		.loc 1 94 0
+ 365 01f2 0223     		movs	r3, #2
+ 366 01f4 8DF81630 		strb	r3, [sp, #22]
+  95:Src/usrMain.c **** 		if (canSendMessage(can2Handle, &toSend))
+ 367              		.loc 1 95 0
+ 368 01f8 1388     		ldrh	r3, [r2]
+ 369 01fa ADF81730 		strh	r3, [sp, #23]	@ unaligned
+  96:Src/usrMain.c **** 			; //error sending config
+ 370              		.loc 1 96 0
+ 371 01fe 124B     		ldr	r3, .L30+44
+ 372 0200 1868     		ldr	r0, [r3]
+ 373 0202 05A9     		add	r1, sp, #20
+ 374 0204 FFF7FEFF 		bl	canSendMessage
+ 375              	.LVL48:
+ 376 0208 28E0     		b	.L9
+ 377              	.L17:
+ 378              	.LBE24:
+  99:Src/usrMain.c **** 		if (m->payload[0] == 0)
+ 379              		.loc 1 99 0
+ 380 020a 142B     		cmp	r3, #20
+ 381 020c 26D1     		bne	.L9
+ 100:Src/usrMain.c **** 			driverInfoPeriodMs = 0;
+ 382              		.loc 1 100 0
+ 383 020e 9DF80C30 		ldrb	r3, [sp, #12]	@ zero_extendqisi2
+ 384 0212 EBB9     		cbnz	r3, .L18
+ 101:Src/usrMain.c **** 		else
+ 385              		.loc 1 101 0
+ 386 0214 0022     		movs	r2, #0
+ 387 0216 0D4B     		ldr	r3, .L30+48
+ 388 0218 1A80     		strh	r2, [r3]	@ movhi
+ARM GAS  /tmp/cccOUwYK.s 			page 11
+
+
+ 389 021a 1FE0     		b	.L9
+ 390              	.L31:
+ 391              		.align	2
+ 392              	.L30:
+ 393 021c 00000000 		.word	.LANCHOR0
+ 394 0220 0000A040 		.word	1084227584
+ 395 0224 0000FA43 		.word	1140457472
+ 396 0228 0000FAC3 		.word	-1007026176
+ 397 022c 00000000 		.word	.LANCHOR2
+ 398 0230 00000000 		.word	.LANCHOR1
+ 399 0234 00000000 		.word	sendingNodeStatus
+ 400 0238 00000000 		.word	.LANCHOR3
+ 401 023c C5B3A291 		.word	-1851608123
+ 402 0240 00000000 		.word	.LANCHOR4
+ 403 0244 00000000 		.word	.LANCHOR5
+ 404 0248 00000000 		.word	can2Handle
+ 405 024c 00000000 		.word	.LANCHOR6
+ 406              	.L18:
+ 103:Src/usrMain.c **** 	}
+ 407              		.loc 1 103 0
+ 408 0250 4FF47A72 		mov	r2, #1000
+ 409 0254 92FBF3F3 		sdiv	r3, r2, r3
+ 410 0258 584A     		ldr	r2, .L32
+ 411 025a 1380     		strh	r3, [r2]	@ movhi
+ 412              	.LVL49:
+ 413              	.L9:
+ 414              	.LBE21:
+ 415              	.LBE20:
+ 416              	.LBE19:
+ 150:Src/usrMain.c **** 			handleMessage(&message);
+ 151:Src/usrMain.c **** 		}
+ 152:Src/usrMain.c **** 
+ 153:Src/usrMain.c **** 		if (ENCODER && canCheckInbox(can2Handle)) {
+ 417              		.loc 1 153 0
+ 418 025c 584B     		ldr	r3, .L32+4
+ 419 025e 1868     		ldr	r0, [r3]
+ 420 0260 FFF7FEFF 		bl	canCheckInbox
+ 421              	.LVL50:
+ 422 0264 60B1     		cbz	r0, .L19
+ 423              	.LBB25:
+ 154:Src/usrMain.c **** 			CanMessage received;
+ 155:Src/usrMain.c **** 			canGetNew(can2Handle, &received);
+ 424              		.loc 1 155 0
+ 425 0266 564B     		ldr	r3, .L32+4
+ 426 0268 1868     		ldr	r0, [r3]
+ 427 026a 05A9     		add	r1, sp, #20
+ 428 026c FFF7FEFF 		bl	canGetNew
+ 429              	.LVL51:
+ 156:Src/usrMain.c **** 			ENC_CNT = *((uint16_t*)received.data);
+ 430              		.loc 1 156 0
+ 431 0270 BDF81720 		ldrh	r2, [sp, #23]	@ unaligned
+ 432 0274 534B     		ldr	r3, .L32+8
+ 433 0276 1A80     		strh	r2, [r3]	@ movhi
+ 157:Src/usrMain.c **** 			indexPulsePosition = *((uint16_t*)received.data + 1);
+ 434              		.loc 1 157 0
+ 435 0278 BDF81920 		ldrh	r2, [sp, #25]	@ unaligned
+ 436 027c 524B     		ldr	r3, .L32+12
+ARM GAS  /tmp/cccOUwYK.s 			page 12
+
+
+ 437 027e 1A80     		strh	r2, [r3]	@ movhi
+ 438              	.L19:
+ 439              	.LBE25:
+ 158:Src/usrMain.c **** 		}
+ 159:Src/usrMain.c **** 
+ 160:Src/usrMain.c **** 		if (ENCODER && modeNow == POSITION) {
+ 440              		.loc 1 160 0
+ 441 0280 524B     		ldr	r3, .L32+16
+ 442 0282 1B78     		ldrb	r3, [r3]	@ zero_extendqisi2
+ 443 0284 022B     		cmp	r3, #2
+ 444 0286 16D1     		bne	.L20
+ 161:Src/usrMain.c **** 			positionPid.input = ENC_CNT;
+ 445              		.loc 1 161 0
+ 446 0288 4E4B     		ldr	r3, .L32+8
+ 447 028a 1888     		ldrh	r0, [r3]
+ 448 028c 504C     		ldr	r4, .L32+20
+ 449 028e 80B2     		uxth	r0, r0
+ 450 0290 FFF7FEFF 		bl	__aeabi_ui2f
+ 451              	.LVL52:
+ 452 0294 E060     		str	r0, [r4, #12]	@ float
+ 162:Src/usrMain.c **** 			if (pidCompute(&positionPid))
+ 453              		.loc 1 162 0
+ 454 0296 2046     		mov	r0, r4
+ 455 0298 FFF7FEFF 		bl	pidCompute
+ 456              	.LVL53:
+ 457 029c 38B1     		cbz	r0, .L21
+ 163:Src/usrMain.c **** 				vescSetPwm(positionPid.output * (PID_REVERSED ? -1 : 1));
+ 458              		.loc 1 163 0
+ 459 029e 6069     		ldr	r0, [r4, #20]	@ float
+ 460 02a0 00F10040 		add	r0, r0, #-2147483648
+ 461 02a4 FFF7FEFF 		bl	__aeabi_f2iz
+ 462              	.LVL54:
+ 463 02a8 00B2     		sxth	r0, r0
+ 464 02aa FFF7FEFF 		bl	vescSetPwm
+ 465              	.LVL55:
+ 466              	.L21:
+ 164:Src/usrMain.c **** 			led(1,1);
+ 467              		.loc 1 164 0
+ 468 02ae 0120     		movs	r0, #1
+ 469 02b0 0146     		mov	r1, r0
+ 470 02b2 FFF7FEFF 		bl	led
+ 471              	.LVL56:
+ 472              	.L20:
+ 165:Src/usrMain.c **** 		}
+ 166:Src/usrMain.c **** 
+ 167:Src/usrMain.c **** 		uint32_t nowMs = HAL_GetTick();
+ 473              		.loc 1 167 0
+ 474 02b6 FFF7FEFF 		bl	HAL_GetTick
+ 475              	.LVL57:
+ 476 02ba 0446     		mov	r4, r0
+ 477              	.LVL58:
+ 168:Src/usrMain.c **** 		if (nowMs - lastReceivedMessageMs > MOTOR_TIMEOUT_MS) {
+ 478              		.loc 1 168 0
+ 479 02bc 431B     		subs	r3, r0, r5
+ 480 02be B3F5FA7F 		cmp	r3, #500
+ 481 02c2 0CD9     		bls	.L22
+ 169:Src/usrMain.c **** 			vescSetCurrent(0);
+ARM GAS  /tmp/cccOUwYK.s 			page 13
+
+
+ 482              		.loc 1 169 0
+ 483 02c4 0020     		movs	r0, #0
+ 484              	.LVL59:
+ 485 02c6 FFF7FEFF 		bl	vescSetCurrent
+ 486              	.LVL60:
+ 170:Src/usrMain.c **** 			led(1, 0);
+ 487              		.loc 1 170 0
+ 488 02ca 0120     		movs	r0, #1
+ 489 02cc 0021     		movs	r1, #0
+ 490 02ce FFF7FEFF 		bl	led
+ 491              	.LVL61:
+ 171:Src/usrMain.c **** 			modeNow = OFF;
+ 492              		.loc 1 171 0
+ 493 02d2 0022     		movs	r2, #0
+ 494 02d4 3D4B     		ldr	r3, .L32+16
+ 495 02d6 1A70     		strb	r2, [r3]
+ 172:Src/usrMain.c **** 			pidStop(&positionPid);
+ 496              		.loc 1 172 0
+ 497 02d8 3D48     		ldr	r0, .L32+20
+ 498 02da FFF7FEFF 		bl	pidStop
+ 499              	.LVL62:
+ 500              	.L22:
+ 173:Src/usrMain.c **** 		}
+ 174:Src/usrMain.c **** 		if (positionInfoPeriodMs && nowMs - lastSentPosInfoMs > positionInfoPeriodMs) {
+ 501              		.loc 1 174 0
+ 502 02de 3D4B     		ldr	r3, .L32+24
+ 503 02e0 1B88     		ldrh	r3, [r3]
+ 504 02e2 BBB3     		cbz	r3, .L23
+ 505              		.loc 1 174 0 is_stmt 0 discriminator 1
+ 506 02e4 C8EB0402 		rsb	r2, r8, r4
+ 507 02e8 9A42     		cmp	r2, r3
+ 508 02ea 33D9     		bls	.L23
+ 509              	.LVL63:
+ 510              	.LBB26:
+ 175:Src/usrMain.c **** 			lastSentPosInfoMs = nowMs;
+ 176:Src/usrMain.c **** 			CanterosMessage toSend;
+ 177:Src/usrMain.c **** 			toSend.header = 28;
+ 511              		.loc 1 177 0 is_stmt 1
+ 512 02ec 1C23     		movs	r3, #28
+ 513 02ee 8DF81630 		strb	r3, [sp, #22]
+ 178:Src/usrMain.c **** 			toSend.payloadSize = 4;
+ 514              		.loc 1 178 0
+ 515 02f2 0423     		movs	r3, #4
+ 516 02f4 8DF81730 		strb	r3, [sp, #23]
+ 179:Src/usrMain.c **** 			uint16_t posToSend = ((int32_t)ENC_CNT * 3600 / ENC_CNT_SCALE);
+ 517              		.loc 1 179 0
+ 518 02f8 324B     		ldr	r3, .L32+8
+ 519 02fa 1988     		ldrh	r1, [r3]
+ 520 02fc 89B2     		uxth	r1, r1
+ 521 02fe 4FF46162 		mov	r2, #3600
+ 522 0302 02FB01F1 		mul	r1, r2, r1
+ 523 0306 3448     		ldr	r0, .L32+28
+ 524 0308 80FB01E3 		smull	lr, r3, r0, r1
+ 525 030c 0B44     		add	r3, r3, r1
+ 526 030e C917     		asrs	r1, r1, #31
+ 527 0310 C1EBE331 		rsb	r1, r1, r3, asr #15
+ 528              	.LVL64:
+ARM GAS  /tmp/cccOUwYK.s 			page 14
+
+
+ 180:Src/usrMain.c **** 			uint16_t indexToSend = ((int32_t)indexPulsePosition * 3600 / ENC_CNT_SCALE);
+ 529              		.loc 1 180 0
+ 530 0314 2C4B     		ldr	r3, .L32+12
+ 531 0316 1B88     		ldrh	r3, [r3]
+ 532 0318 9BB2     		uxth	r3, r3
+ 533 031a 02FB03F3 		mul	r3, r2, r3
+ 534 031e 80FB0320 		smull	r2, r0, r0, r3
+ 535 0322 1844     		add	r0, r0, r3
+ 536 0324 DB17     		asrs	r3, r3, #31
+ 537 0326 C3EBE033 		rsb	r3, r3, r0, asr #15
+ 538              	.LVL65:
+ 181:Src/usrMain.c **** 			toSend.payload[0] = posToSend >> 8;
+ 539              		.loc 1 181 0
+ 540 032a C1F30722 		ubfx	r2, r1, #8, #8
+ 541 032e 8DF81820 		strb	r2, [sp, #24]
+ 182:Src/usrMain.c **** 			toSend.payload[1] = posToSend & 0xff;
+ 542              		.loc 1 182 0
+ 543 0332 8DF81910 		strb	r1, [sp, #25]
+ 183:Src/usrMain.c **** 			toSend.payload[2] = indexToSend >> 8;
+ 544              		.loc 1 183 0
+ 545 0336 C3F30722 		ubfx	r2, r3, #8, #8
+ 546 033a 8DF81A20 		strb	r2, [sp, #26]
+ 184:Src/usrMain.c **** 			toSend.payload[3] = indexToSend & 0xff;
+ 547              		.loc 1 184 0
+ 548 033e 8DF81B30 		strb	r3, [sp, #27]
+ 185:Src/usrMain.c **** 			HAL_StatusTypeDef res = canterosSendMessage(&toSend);
+ 549              		.loc 1 185 0
+ 550 0342 05A8     		add	r0, sp, #20
+ 551 0344 FFF7FEFF 		bl	canterosSendMessage
+ 552              	.LVL66:
+ 186:Src/usrMain.c **** 			if (res) {
+ 553              		.loc 1 186 0
+ 554 0348 18B1     		cbz	r0, .L24
+ 187:Src/usrMain.c **** 				//Error in sending status
+ 188:Src/usrMain.c **** 				led(2, 1);
+ 555              		.loc 1 188 0
+ 556 034a 0220     		movs	r0, #2
+ 557              	.LVL67:
+ 558 034c 0121     		movs	r1, #1
+ 559 034e FFF7FEFF 		bl	led
+ 560              	.LVL68:
+ 561              	.L24:
+ 175:Src/usrMain.c **** 			CanterosMessage toSend;
+ 562              		.loc 1 175 0
+ 563 0352 A046     		mov	r8, r4
+ 564              	.LVL69:
+ 565              	.L23:
+ 566              	.LBE26:
+ 189:Src/usrMain.c **** 			}
+ 190:Src/usrMain.c **** 		}
+ 191:Src/usrMain.c **** 		if (nowMs - lastVescReqMs >= 100) {
+ 567              		.loc 1 191 0
+ 568 0354 A31B     		subs	r3, r4, r6
+ 569 0356 632B     		cmp	r3, #99
+ 570 0358 02D9     		bls	.L25
+ 571              	.LVL70:
+ 192:Src/usrMain.c **** 			lastVescReqMs = nowMs;
+ARM GAS  /tmp/cccOUwYK.s 			page 15
+
+
+ 193:Src/usrMain.c **** 			vescRequestValues();
+ 572              		.loc 1 193 0
+ 573 035a FFF7FEFF 		bl	vescRequestValues
+ 574              	.LVL71:
+ 192:Src/usrMain.c **** 			lastVescReqMs = nowMs;
+ 575              		.loc 1 192 0
+ 576 035e 2646     		mov	r6, r4
+ 577              	.LVL72:
+ 578              	.L25:
+ 194:Src/usrMain.c **** 		}
+ 195:Src/usrMain.c **** 		if (driverInfoPeriodMs && nowMs - lastSentInfoMs > driverInfoPeriodMs) {
+ 579              		.loc 1 195 0
+ 580 0360 164B     		ldr	r3, .L32
+ 581 0362 1B88     		ldrh	r3, [r3]
+ 582 0364 002B     		cmp	r3, #0
+ 583 0366 3FF4BAAE 		beq	.L8
+ 584              		.loc 1 195 0 is_stmt 0 discriminator 1
+ 585 036a E21B     		subs	r2, r4, r7
+ 586 036c 9A42     		cmp	r2, r3
+ 587 036e 7FF6B6AE 		bls	.L8
+ 588              	.LVL73:
+ 589              	.LBB27:
+ 196:Src/usrMain.c **** 			lastSentInfoMs = nowMs;
+ 197:Src/usrMain.c **** 			CanterosMessage toSend;
+ 198:Src/usrMain.c **** 			toSend.header = 30;
+ 590              		.loc 1 198 0 is_stmt 1
+ 591 0372 1E23     		movs	r3, #30
+ 592 0374 8DF81630 		strb	r3, [sp, #22]
+ 199:Src/usrMain.c **** 			toSend.payloadSize = 7;
+ 593              		.loc 1 199 0
+ 594 0378 0723     		movs	r3, #7
+ 595 037a 8DF81730 		strb	r3, [sp, #23]
+ 200:Src/usrMain.c **** 			memset(toSend.payload, 0, sizeof(toSend.payload));
+ 201:Src/usrMain.c **** 
+ 202:Src/usrMain.c **** 			toSend.payload[0] = vescLastValues.tacho >> 24;
+ 596              		.loc 1 202 0
+ 597 037e 174A     		ldr	r2, .L32+32
+ 598 0380 536B     		ldr	r3, [r2, #52]
+ 599 0382 1916     		asrs	r1, r3, #24
+ 600 0384 8DF81810 		strb	r1, [sp, #24]
+ 203:Src/usrMain.c **** 			toSend.payload[1] = vescLastValues.tacho >> 16;
+ 601              		.loc 1 203 0
+ 602 0388 1914     		asrs	r1, r3, #16
+ 603 038a 8DF81910 		strb	r1, [sp, #25]
+ 204:Src/usrMain.c **** 			toSend.payload[2] = vescLastValues.tacho >> 8;
+ 604              		.loc 1 204 0
+ 605 038e 1912     		asrs	r1, r3, #8
+ 606 0390 8DF81A10 		strb	r1, [sp, #26]
+ 205:Src/usrMain.c **** 			toSend.payload[3] = vescLastValues.tacho;
+ 607              		.loc 1 205 0
+ 608 0394 8DF81B30 		strb	r3, [sp, #27]
+ 206:Src/usrMain.c **** 			toSend.payload[4] = vescLastValues.vIn >> 8;
+ 609              		.loc 1 206 0
+ 610 0398 138C     		ldrh	r3, [r2, #32]
+ 611 039a 43F30722 		sbfx	r2, r3, #8, #8
+ 612 039e 8DF81C20 		strb	r2, [sp, #28]
+ 207:Src/usrMain.c **** 			toSend.payload[5] = vescLastValues.vIn;
+ARM GAS  /tmp/cccOUwYK.s 			page 16
+
+
+ 613              		.loc 1 207 0
+ 614 03a2 8DF81D30 		strb	r3, [sp, #29]
+ 208:Src/usrMain.c **** 			HAL_StatusTypeDef res = canterosSendMessage(&toSend);
+ 615              		.loc 1 208 0
+ 616 03a6 05A8     		add	r0, sp, #20
+ 617 03a8 FFF7FEFF 		bl	canterosSendMessage
+ 618              	.LVL74:
+ 209:Src/usrMain.c **** 			if (res) {
+ 619              		.loc 1 209 0
+ 620 03ac 18B1     		cbz	r0, .L27
+ 210:Src/usrMain.c **** 				//Error in sending status
+ 211:Src/usrMain.c **** 				led(2, 1);
+ 621              		.loc 1 211 0
+ 622 03ae 0220     		movs	r0, #2
+ 623              	.LVL75:
+ 624 03b0 0121     		movs	r1, #1
+ 625 03b2 FFF7FEFF 		bl	led
+ 626              	.LVL76:
+ 627              	.L27:
+ 196:Src/usrMain.c **** 			CanterosMessage toSend;
+ 628              		.loc 1 196 0
+ 629 03b6 2746     		mov	r7, r4
+ 630 03b8 91E6     		b	.L8
+ 631              	.L33:
+ 632 03ba 00BF     		.align	2
+ 633              	.L32:
+ 634 03bc 00000000 		.word	.LANCHOR6
+ 635 03c0 00000000 		.word	can2Handle
+ 636 03c4 00000000 		.word	.LANCHOR5
+ 637 03c8 00000000 		.word	.LANCHOR7
+ 638 03cc 00000000 		.word	.LANCHOR3
+ 639 03d0 00000000 		.word	.LANCHOR0
+ 640 03d4 00000000 		.word	.LANCHOR4
+ 641 03d8 F56EB8D1 		.word	-776442123
+ 642 03dc 00000000 		.word	vescLastValues
+ 643              	.LBE27:
+ 644              	.LBE18:
+ 645              		.cfi_endproc
+ 646              	.LFE64:
+ 648              		.global	driverInfoPeriodMs
+ 649              		.global	RESET_TIMEOUT_MS
+ 650              		.global	MOTOR_TIMEOUT_MS
+ 651              		.section	.rodata.RESET_TIMEOUT_MS,"a",%progbits
+ 652              		.align	2
+ 655              	RESET_TIMEOUT_MS:
+ 656 0000 FFFFFFFF 		.word	-1
+ 657              		.section	.rodata.myAddresses,"a",%progbits
+ 658              		.align	2
+ 659              		.set	.LANCHOR1,. + 0
+ 662              	myAddresses:
+ 663 0000 C800     		.short	200
+ 664              		.section	.bss.modeNow,"aw",%nobits
+ 665              		.set	.LANCHOR3,. + 0
+ 668              	modeNow:
+ 669 0000 00       		.space	1
+ 670              		.section	.bss.positionPid,"aw",%nobits
+ 671              		.align	2
+ARM GAS  /tmp/cccOUwYK.s 			page 17
+
+
+ 672              		.set	.LANCHOR0,. + 0
+ 675              	positionPid:
+ 676 0000 00000000 		.space	52
+ 676      00000000 
+ 676      00000000 
+ 676      00000000 
+ 676      00000000 
+ 677              		.section	.bss.positionInfoPeriodMs,"aw",%nobits
+ 678              		.align	1
+ 679              		.set	.LANCHOR4,. + 0
+ 682              	positionInfoPeriodMs:
+ 683 0000 0000     		.space	2
+ 684              		.section	.bss.ENC_CNT,"aw",%nobits
+ 685              		.align	1
+ 686              		.set	.LANCHOR5,. + 0
+ 689              	ENC_CNT:
+ 690 0000 0000     		.space	2
+ 691              		.section	.bss.driverInfoPeriodMs,"aw",%nobits
+ 692              		.align	1
+ 693              		.set	.LANCHOR6,. + 0
+ 696              	driverInfoPeriodMs:
+ 697 0000 0000     		.space	2
+ 698              		.section	.data.indexPulsePosition,"aw",%progbits
+ 699              		.align	1
+ 700              		.set	.LANCHOR7,. + 0
+ 703              	indexPulsePosition:
+ 704 0000 FFFF     		.short	-1
+ 705              		.section	.rodata.handledHeaders,"a",%progbits
+ 706              		.align	2
+ 707              		.set	.LANCHOR2,. + 0
+ 710              	handledHeaders:
+ 711 0000 07       		.byte	7
+ 712 0001 11       		.byte	17
+ 713 0002 08       		.byte	8
+ 714 0003 12       		.byte	18
+ 715 0004 26       		.byte	38
+ 716 0005 09       		.byte	9
+ 717 0006 13       		.byte	19
+ 718 0007 14       		.byte	20
+ 719              		.section	.rodata.MOTOR_TIMEOUT_MS,"a",%progbits
+ 720              		.align	2
+ 723              	MOTOR_TIMEOUT_MS:
+ 724 0000 F4010000 		.word	500
+ 725              		.text
+ 726              	.Letext0:
+ 727              		.file 2 "/usr/include/newlib/machine/_default_types.h"
+ 728              		.file 3 "/usr/include/newlib/sys/_stdint.h"
+ 729              		.file 4 "../../shared/firmware/Drivers/CMSIS/Device/ST/STM32F1xx/Include/stm32f105xc.h"
+ 730              		.file 5 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_def.h"
+ 731              		.file 6 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal_can.h"
+ 732              		.file 7 "../../shared/firmware/Inc/can.h"
+ 733              		.file 8 "../../shared/firmware/Inc/canterosDefs.h"
+ 734              		.file 9 "../../shared/firmware/Inc/canteros.h"
+ 735              		.file 10 "../../shared/firmware/Inc/pid.h"
+ 736              		.file 11 "Inc/vesc.h"
+ 737              		.file 12 "../../shared/firmware/Drivers/CMSIS/Include/core_cm3.h"
+ 738              		.file 13 "../../shared/firmware/Inc/globals.h"
+ARM GAS  /tmp/cccOUwYK.s 			page 18
+
+
+ 739              		.file 14 "../../shared/firmware/Drivers/STM32F1xx_HAL_Driver/Inc/stm32f1xx_hal.h"
+ARM GAS  /tmp/cccOUwYK.s 			page 19
+
+
+DEFINED SYMBOLS
+                            *ABS*:0000000000000000 usrMain.c
+     /tmp/cccOUwYK.s:22     .text.usrMain:0000000000000000 $t
+     /tmp/cccOUwYK.s:27     .text.usrMain:0000000000000000 usrMain
+     /tmp/cccOUwYK.s:393    .text.usrMain:000000000000021c $d
+     /tmp/cccOUwYK.s:408    .text.usrMain:0000000000000250 $t
+     /tmp/cccOUwYK.s:634    .text.usrMain:00000000000003bc $d
+     /tmp/cccOUwYK.s:696    .bss.driverInfoPeriodMs:0000000000000000 driverInfoPeriodMs
+     /tmp/cccOUwYK.s:655    .rodata.RESET_TIMEOUT_MS:0000000000000000 RESET_TIMEOUT_MS
+     /tmp/cccOUwYK.s:723    .rodata.MOTOR_TIMEOUT_MS:0000000000000000 MOTOR_TIMEOUT_MS
+     /tmp/cccOUwYK.s:652    .rodata.RESET_TIMEOUT_MS:0000000000000000 $d
+     /tmp/cccOUwYK.s:658    .rodata.myAddresses:0000000000000000 $d
+     /tmp/cccOUwYK.s:662    .rodata.myAddresses:0000000000000000 myAddresses
+     /tmp/cccOUwYK.s:668    .bss.modeNow:0000000000000000 modeNow
+     /tmp/cccOUwYK.s:669    .bss.modeNow:0000000000000000 $d
+     /tmp/cccOUwYK.s:671    .bss.positionPid:0000000000000000 $d
+     /tmp/cccOUwYK.s:675    .bss.positionPid:0000000000000000 positionPid
+     /tmp/cccOUwYK.s:678    .bss.positionInfoPeriodMs:0000000000000000 $d
+     /tmp/cccOUwYK.s:682    .bss.positionInfoPeriodMs:0000000000000000 positionInfoPeriodMs
+     /tmp/cccOUwYK.s:685    .bss.ENC_CNT:0000000000000000 $d
+     /tmp/cccOUwYK.s:689    .bss.ENC_CNT:0000000000000000 ENC_CNT
+     /tmp/cccOUwYK.s:692    .bss.driverInfoPeriodMs:0000000000000000 $d
+     /tmp/cccOUwYK.s:699    .data.indexPulsePosition:0000000000000000 $d
+     /tmp/cccOUwYK.s:703    .data.indexPulsePosition:0000000000000000 indexPulsePosition
+     /tmp/cccOUwYK.s:706    .rodata.handledHeaders:0000000000000000 $d
+     /tmp/cccOUwYK.s:710    .rodata.handledHeaders:0000000000000000 handledHeaders
+     /tmp/cccOUwYK.s:720    .rodata.MOTOR_TIMEOUT_MS:0000000000000000 $d
+                     .debug_frame:0000000000000010 $d
+
+UNDEFINED SYMBOLS
+__aeabi_i2f
+__aeabi_ui2f
+__aeabi_f2iz
+led
+HAL_Delay
+configCanteros
+canInit
+canterosInit
+vescInit
+HAL_GetTick
+canterosProcess
+canterosCheckInbox
+canterosGetNew
+pidStop
+vescSetPwm
+pidStart
+canSendMessage
+sendingNodeStatus
+can2Handle
+canCheckInbox
+canGetNew
+pidCompute
+vescSetCurrent
+canterosSendMessage
+vescRequestValues
+vescLastValues
