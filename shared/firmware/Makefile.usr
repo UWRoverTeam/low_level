@@ -1,0 +1,14 @@
+#not complete Makefile, meant to be included
+
+USR_SOURCES += \
+../../shared/firmware/Src/can.c \
+../../shared/firmware/Src/canteros.c \
+../../shared/firmware/Src/pid.c \
+../../shared/firmware/Src/globals.c \
+../../shared/firmware/Src/system_stm32f1xx.c \
+
+ASM_SOURCES += \
+../../shared/firmware/startup_stm32f105xc.s \
+
+LDSCRIPT = ../../shared/firmware/STM32F105RBTx_FLASH.ld
+
