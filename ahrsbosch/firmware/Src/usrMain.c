@@ -86,7 +86,7 @@ int usrMain()
 	bno055_read_accel_xyz(&accel_xyz);
     printf("accel: %d, %d, %d", (int)(accel_xyz.x), (int)(accel_xyz.y), (int)(accel_xyz.z));
 	
-	bno055_set_operation_mode(BNO055_OPERATION_MODE_NDOF);
+	bno055_set_operation_mode(BNO055_OPERATION_MODE_NDOF); // dodać _FMC_OFF
 	struct bno055_euler_double_t d_euler_hpr;
 
 	configCanteros(PRIMARY_ADDRESS, ADDRESSES_SIZE, myAddresses, HEADERS_SIZE, handledHeaders);
