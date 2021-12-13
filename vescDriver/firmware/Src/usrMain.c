@@ -6,7 +6,7 @@
 #include "pid.h"
 #include "vesc.h"
 
-#define PRIMARY_ADDRESS 200
+#define PRIMARY_ADDRESS 204
 #define ADDRESSES_SIZE 1
 static const uint16_t myAddresses[ADDRESSES_SIZE] = {
 	//128, //all drive wheels
@@ -36,21 +36,20 @@ volatile static uint16_t ENC_CNT;
 volatile static uint16_t indexPulsePosition = 0xffff;
 static Mode modeNow = OFF;
 
+#define PID_REVERSED false 
+
 #if PRIMARY_ADDRESS == 200 //base
- #define POSITION_KP 0.5f
+ #define POSITION_KP -0.5f
  #define POSITION_KI 0.0f
- #define POSITION_KD 5.0f
- #define PID_REVERSED true
+ #define POSITION_KD -5.0f
 #elif PRIMARY_ADDRESS == 201 //gripper_latitude
  #define POSITION_KP 1.0f
  #define POSITION_KI 0.0f
  #define POSITION_KD 1.0f
- #define PID_REVERSED false
 #else
  #define POSITION_KP 0.0f
  #define POSITION_KI 0.0f
  #define POSITION_KD 0.0f
- #define PID_REVERSED false
 #endif
 static PidData positionPid;
 
@@ -93,9 +92,14 @@ static inline void handleMessage(const CanterosMessage* m)
 		toSend.id = 1;
 		toSend.dlc = 2;
 		*((uint16_t*)toSend.data) = ENC_CNT;
-		if (canSendMessage(can2Handle, &toSend))
+		if (canSendMessage(can2Handle, &toSend)) 
 			; //error sending config
-	//-----Driver info-----
+	} else if (ENCODER && m->header == 43) { //config P
+		positionPid.Kp = *((float*)(m->payload));
+	} else if (ENCODER && m->header == 44) { //config I
+		positionPid.Ki = *((float*)(m->payload));
+	} else if (ENCODER && m->header == 45) { //config D
+		positionPid.Kd = *((float*)(m->payload));
 	} else if (m->header == 20) { //request driver info
 		if (m->payload[0] == 0)
 			driverInfoPeriodMs = 0;

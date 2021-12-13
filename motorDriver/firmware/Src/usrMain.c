@@ -32,10 +32,29 @@ static Mode modeNow = OFF;
 #define POSITION_KI 0.0f
 #define POSITION_KD 0.005f
 static PidData positionPid;
-#if PRIMARY_ADDRESS == 191
- #define PID_REVERSED true
+
+#define PID_REVERSED false
+
+#if PRIMARY_ADDRESS == 196 //base
+ #define POSITION_KP 1.0f
+ #define POSITION_KI 0.0f
+ #define POSITION_KD 0.05f
+#elif PRIMARY_ADDRESS == 195 //gripper_latitude
+ #define POSITION_KP -1.0f
+ #define POSITION_KI 0.0f
+ #define POSITION_KD -0.01f
+#elif PRIMARY_ADDRESS == 190 //arm_upper
+ #define POSITION_KP -5.0f
+ #define POSITION_KI 0.0f
+ #define POSITION_KD -0.005f
+#elif PRIMARY_ADDRESS == 188 //arm_lower
+ #define POSITION_KP 5.0f
+ #define POSITION_KI 0.0f
+ #define POSITION_KD 0.005f
 #else
- #define PID_REVERSED false
+ #define POSITION_KP 0.0f
+ #define POSITION_KI 0.0f
+ #define POSITION_KD 0.0f
 #endif
 
 static uint16_t positionInfoPeriodMs = 0;
@@ -80,6 +99,18 @@ static inline void handleMessage(const CanterosMessage* m)
 		*((uint16_t*)toSend.data) = ENC_CNT;
 		if (canSendMessage(can2Handle, &toSend))
 			; //error sending config
+	} else if (m->header == 35) { //P parameter
+		int32_t int_data = m->payload[0]<<8 | m->payload[1];
+		int_data = int_data << 16 | (m->payload[2]<<8 | m->payload[3]);
+		positionPid.Kp = int_data / 10000.0f;
+	} else if (m->header == 36) { //I parameter
+		int32_t int_data = m->payload[0]<<8 | m->payload[1];
+		int_data = int_data << 16 | (m->payload[2]<<8 | m->payload[3]);
+		positionPid.Ki = int_data / 10000.0f;
+	} else if (m->header == 37) { //D parameter
+		int32_t int_data = m->payload[0]<<8 | m->payload[1];
+		int_data = int_data << 16 | (m->payload[2]<<8 | m->payload[3]);
+		positionPid.Kd = int_data / 10000.0f;
 	}
 }
 
